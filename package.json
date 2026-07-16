@@ -1,0 +1,15 @@
+{
+  "name": "xambas",
+  "private": true,
+  "packageManager": "yarn@4.9.1",
+  "workspaces": [
+    "apps/client",
+    "apps/provider"
+  ],
+  "scripts": {
+    "dev:client": "yarn workspace client dev",
+    "dev:provider": "yarn workspace provider dev",
+    "build:client": "yarn workspace client build",
+    "build:provider": "yarn workspace provider build"
+  }
+}
