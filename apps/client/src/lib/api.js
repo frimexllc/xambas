@@ -71,6 +71,22 @@ export const api = {
     request(`/billing/payments/${paymentId}/confirm-completion?client_id=${clientId}`, {
       method: "POST",
     }),
+
+  // servicios recurrentes / suscripciones
+  listSubscriptions: (clientId) =>
+    request(`/recurring/subscriptions?client_id=${clientId}`),
+  createSubscription: (payload) =>
+    request("/recurring/subscriptions", { method: "POST", body: JSON.stringify(payload) }),
+  pauseSubscription: (subscriptionId) =>
+    request(`/recurring/subscriptions/${subscriptionId}/pause`, { method: "POST" }),
+  resumeSubscription: (subscriptionId) =>
+    request(`/recurring/subscriptions/${subscriptionId}/resume`, { method: "POST" }),
+  cancelSubscription: (subscriptionId) =>
+    request(`/recurring/subscriptions/${subscriptionId}/cancel`, { method: "POST" }),
+  generateOccurrence: (subscriptionId) =>
+    request(`/recurring/subscriptions/${subscriptionId}/generate`, { method: "POST" }),
+  listOccurrences: (subscriptionId) =>
+    request(`/recurring/subscriptions/${subscriptionId}/occurrences`),
 };
 
 export { BASE_URL };

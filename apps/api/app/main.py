@@ -14,6 +14,8 @@ from app.modules.matching.router import router as matching_router
 from app.modules.matching.service import matching_service
 from app.modules.messaging.router import router as messaging_router
 from app.modules.messaging.service import messaging_service
+from app.modules.recurring.router import router as recurring_router
+from app.modules.recurring.service import recurring_service
 from app.modules.reputation.router import router as reputation_router
 from app.modules.reputation.service import reputation_service
 
@@ -33,6 +35,7 @@ api_router.include_router(identity_router)
 api_router.include_router(matching_router)
 api_router.include_router(billing_router)
 api_router.include_router(messaging_router)
+api_router.include_router(recurring_router)
 api_router.include_router(reputation_router)
 api_router.include_router(admin_router)
 api_router.include_router(admin_management_router)
@@ -45,6 +48,7 @@ async def on_startup() -> None:
     await matching_service.ensure_indexes()
     await matching_service.ensure_launch_categories()
     await messaging_service.ensure_indexes()
+    await recurring_service.ensure_indexes()
     await reputation_service.ensure_indexes()
     await admin_service.ensure_indexes()
     await payments_service.ensure_indexes()

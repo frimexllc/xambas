@@ -1,0 +1,7 @@
+{
+  "name": "xambas-frontend-shim",
+  "private": true,
+  "scripts": {
+    "start": "bash ./start.sh"
+  }
+}
