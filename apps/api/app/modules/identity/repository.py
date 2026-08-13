@@ -30,6 +30,7 @@ class IdentityRepository:
             "created_at": datetime.now(timezone.utc).isoformat(),
             "locale": payload.locale,
             "kyc_status": "pending",
+            "is_active": True,
         }
         result = await self._db.users.insert_one(document)
         document["_id"] = result.inserted_id
@@ -54,6 +55,7 @@ class IdentityRepository:
             "portfolio_media": [],
             "stripe_connect_account_id": None,
             "mercadopago_account_id": None,
+            "is_active": True,
         }
         result = await self._db.provider_profiles.insert_one(document)
         document["_id"] = result.inserted_id
@@ -61,6 +63,27 @@ class IdentityRepository:
 
     async def get_user_by_id(self, user_id: str) -> dict[str, Any] | None:
         return await self._db.users.find_one({"_id": ObjectId(user_id)})
+
+    async def list_users(self) -> list[dict[str, Any]]:
+        cursor = self._db.users.find().sort("created_at", -1)
+        return await cursor.to_list(length=500)
+
+    async def update_user_fields(self, user_id: str, fields: dict[str, Any]) -> None:
+        await self._db.users.update_one({"_id": ObjectId(user_id)}, {"$set": fields})
+
+    async def list_provider_profiles(self) -> list[dict[str, Any]]:
+        cursor = self._db.provider_profiles.find().sort("business_name", 1)
+        return await cursor.to_list(length=500)
+
+    async def get_provider_profile_by_id(self, provider_profile_id: str) -> dict[str, Any] | None:
+        return await self._db.provider_profiles.find_one({"_id": ObjectId(provider_profile_id)})
+
+    async def update_provider_profile_fields(
+        self, provider_profile_id: str, fields: dict[str, Any]
+    ) -> None:
+        await self._db.provider_profiles.update_one(
+            {"_id": ObjectId(provider_profile_id)}, {"$set": fields}
+        )
 
     async def get_provider_profile_by_user_id(self, user_id: str) -> dict[str, Any] | None:
         return await self._db.provider_profiles.find_one({"user_id": user_id})

@@ -17,10 +17,14 @@ from app.modules.identity.schemas import (
     OtpRequestResponse,
     OtpVerifyPayload,
     OtpVerifyResponse,
+    ProviderProfileAdminUpdateRequest,
+    ProviderProfileListResponse,
     ProviderProfileSummary,
     SessionSummary,
+    UserAdminUpdateRequest,
     UserBootstrapRequest,
     UserBootstrapResponse,
+    UserListResponse,
     UserSummary,
 )
 
@@ -196,6 +200,51 @@ class IdentityService:
             ),
         )
 
+    async def list_users(self) -> UserListResponse:
+        documents = await self._repository.list_users()
+        return UserListResponse(
+            module="identity",
+            total=len(documents),
+            items=[self._serialize_user(document) for document in documents],
+        )
+
+    async def update_user_admin(
+        self, user_id: str, payload: UserAdminUpdateRequest
+    ) -> UserSummary:
+        await self._get_user_document_or_404(user_id)
+        fields = {key: value for key, value in payload.model_dump().items() if value is not None}
+        if fields:
+            await self._repository.update_user_fields(user_id, fields)
+        refreshed = await self._get_user_document_or_404(user_id)
+        return self._serialize_user(refreshed)
+
+    async def list_provider_profiles(self) -> ProviderProfileListResponse:
+        documents = await self._repository.list_provider_profiles()
+        return ProviderProfileListResponse(
+            module="identity",
+            total=len(documents),
+            items=[self._serialize_provider_profile(document) for document in documents],
+        )
+
+    async def update_provider_profile_admin(
+        self, provider_profile_id: str, payload: ProviderProfileAdminUpdateRequest
+    ) -> ProviderProfileSummary:
+        try:
+            document = await self._repository.get_provider_profile_by_id(provider_profile_id)
+        except InvalidId as exc:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST, detail="provider_profile_id invalido"
+            ) from exc
+        if document is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND, detail="provider_profile no encontrado"
+            )
+        fields = {key: value for key, value in payload.model_dump().items() if value is not None}
+        if fields:
+            await self._repository.update_provider_profile_fields(provider_profile_id, fields)
+        refreshed = await self._repository.get_provider_profile_by_id(provider_profile_id)
+        return self._serialize_provider_profile(refreshed)
+
     def _build_otp_provider(self, provider_name: str | None = None) -> OtpProvider:
         selected_provider = provider_name or settings.otp_provider
         if selected_provider == "twilio":
@@ -244,6 +293,7 @@ class IdentityService:
             locale=document["locale"],
             phone_verified=document["phone_verified"],
             kyc_status=document["kyc_status"],
+            is_active=document.get("is_active", True),
             created_at=document["created_at"],
         )
 
@@ -263,6 +313,7 @@ class IdentityService:
             portfolio_media=document["portfolio_media"],
             stripe_connect_account_id=document["stripe_connect_account_id"],
             mercadopago_account_id=document["mercadopago_account_id"],
+            is_active=document.get("is_active", True),
         )
 
 

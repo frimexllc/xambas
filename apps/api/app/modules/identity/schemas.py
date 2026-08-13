@@ -32,6 +32,7 @@ class UserSummary(BaseModel):
     locale: str
     phone_verified: bool
     kyc_status: KycStatus
+    is_active: bool = True
     created_at: str
 
 
@@ -50,6 +51,32 @@ class ProviderProfileSummary(BaseModel):
     portfolio_media: list[str]
     stripe_connect_account_id: str | None = None
     mercadopago_account_id: str | None = None
+    is_active: bool = True
+
+
+class UserListResponse(BaseModel):
+    module: str
+    total: int
+    items: list[UserSummary]
+
+
+class UserAdminUpdateRequest(BaseModel):
+    role: UserRole | None = None
+    kyc_status: KycStatus | None = None
+    is_active: bool | None = None
+
+
+class ProviderProfileListResponse(BaseModel):
+    module: str
+    total: int
+    items: list[ProviderProfileSummary]
+
+
+class ProviderProfileAdminUpdateRequest(BaseModel):
+    tier: str | None = None
+    insurance_verified: bool | None = None
+    license_verified: bool | None = None
+    is_active: bool | None = None
 
 
 class IdentityStatusResponse(BaseModel):

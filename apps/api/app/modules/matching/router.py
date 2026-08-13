@@ -4,8 +4,10 @@ from app.modules.matching.schemas import (
     CategoryCreateRequest,
     CategoryListResponse,
     CategorySummary,
+    MatchAcceptRequest,
     MatchListResponse,
     MatchingStatusResponse,
+    MatchSummary,
     ServiceRequestCreateRequest,
     ServiceRequestListResponse,
     ServiceRequestResponse,
@@ -58,3 +60,13 @@ async def rerun_matching(request_id: str) -> MatchListResponse:
 @router.get("/service-requests/{request_id}/matches")
 async def list_matches(request_id: str) -> MatchListResponse:
     return await matching_service.list_matches(request_id)
+
+
+@router.get("/providers/{provider_user_id}/matches")
+async def list_matches_for_provider(provider_user_id: str) -> MatchListResponse:
+    return await matching_service.list_matches_for_provider(provider_user_id)
+
+
+@router.post("/matches/{match_id}/accept")
+async def accept_match(match_id: str, payload: MatchAcceptRequest) -> MatchSummary:
+    return await matching_service.accept_match(match_id, payload.provider_user_id)

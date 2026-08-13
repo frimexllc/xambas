@@ -69,6 +69,9 @@ class MatchingRepository:
     async def get_category_by_id(self, category_id: str) -> dict[str, Any] | None:
         return await self._db.categories.find_one({"_id": ObjectId(category_id)})
 
+    async def update_category(self, category_id: str, fields: dict[str, Any]) -> None:
+        await self._db.categories.update_one({"_id": ObjectId(category_id)}, {"$set": fields})
+
     async def list_categories(self, parent_id: str | None = None) -> list[dict[str, Any]]:
         query: dict[str, Any] = {}
         if parent_id is not None:
@@ -173,3 +176,16 @@ class MatchingRepository:
     async def list_matches_for_request(self, request_id: str) -> list[dict[str, Any]]:
         cursor = self._db.matches.find({"request_id": request_id}).sort([("score", -1), ("provider_business_name", 1)])
         return await cursor.to_list(length=100)
+
+    async def get_match_by_id(self, match_id: str) -> dict[str, Any] | None:
+        return await self._db.matches.find_one({"_id": ObjectId(match_id)})
+
+    async def list_matches_for_provider(self, provider_user_id: str) -> list[dict[str, Any]]:
+        cursor = self._db.matches.find({"provider_user_id": provider_user_id}).sort("_id", -1)
+        return await cursor.to_list(length=200)
+
+    async def update_match_status(self, match_id: str, status: str) -> None:
+        await self._db.matches.update_one(
+            {"_id": ObjectId(match_id)},
+            {"$set": {"status": status}},
+        )

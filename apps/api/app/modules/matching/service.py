@@ -9,6 +9,7 @@ from app.modules.matching.schemas import (
     CategoryCreateRequest,
     CategoryListResponse,
     CategorySummary,
+    CategoryUpdateRequest,
     MatchListResponse,
     MatchSummary,
     MatchingStatusResponse,
@@ -79,6 +80,20 @@ class MatchingService:
         document = await self._get_category_document_or_404(category_id)
         return self._serialize_category(document)
 
+    async def update_category(self, category_id: str, payload: CategoryUpdateRequest) -> CategorySummary:
+        await self._get_category_document_or_404(category_id)
+        fields = {key: value for key, value in payload.model_dump().items() if value is not None}
+        if fields:
+            try:
+                await self._repository.update_category(category_id, fields)
+            except DuplicateKeyError as exc:
+                raise HTTPException(
+                    status_code=status.HTTP_409_CONFLICT,
+                    detail="ya existe una categoria con ese nombre bajo el mismo parent_id",
+                ) from exc
+        refreshed = await self._get_category_document_or_404(category_id)
+        return self._serialize_category(refreshed)
+
     async def create_service_request(self, payload: ServiceRequestCreateRequest) -> ServiceRequestResponse:
         client_document = await self._get_user_document_or_404(payload.client_id)
         if client_document["role"] not in {"client", "both"}:
@@ -140,6 +155,34 @@ class MatchingService:
             total=len(documents),
             items=[self._serialize_match(document) for document in documents],
         )
+
+    async def list_matches_for_provider(self, provider_user_id: str) -> MatchListResponse:
+        documents = await self._repository.list_matches_for_provider(provider_user_id)
+        return MatchListResponse(
+            module="matching",
+            request_id="*",
+            total=len(documents),
+            items=[self._serialize_match(document) for document in documents],
+        )
+
+    async def accept_match(self, match_id: str, provider_user_id: str) -> MatchSummary:
+        try:
+            document = await self._repository.get_match_by_id(match_id)
+        except InvalidId as exc:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="match_id invalido",
+            ) from exc
+        if document is None:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="match no encontrado")
+        if document["provider_user_id"] != provider_user_id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="este match no pertenece al proveedor indicado",
+            )
+        await self._repository.update_match_status(match_id, "accepted")
+        document["status"] = "accepted"
+        return self._serialize_match(document)
 
     async def _get_category_document_or_404(self, category_id: str) -> dict:
         try:

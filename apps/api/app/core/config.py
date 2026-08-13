@@ -12,7 +12,9 @@ class Settings(BaseSettings):
     payments_provider: str = "auto"
     default_country_code: str = "MX"
     stripe_secret_key: str = ""
+    stripe_publishable_key: str = ""
     stripe_webhook_secret: str = ""
+    default_currency: str = "mxn"
     mercadopago_access_token: str = ""
     mercadopago_webhook_secret: str = ""
     otp_length: int = 6

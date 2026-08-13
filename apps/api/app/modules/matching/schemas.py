@@ -26,6 +26,13 @@ class CategorySummary(BaseModel):
     risk_level: RiskLevel
 
 
+class CategoryUpdateRequest(BaseModel):
+    name: str | None = Field(default=None, min_length=2, max_length=120)
+    attributes_schema: dict[str, Any] | None = None
+    pricing_mode: PricingMode | None = None
+    risk_level: RiskLevel | None = None
+
+
 class MatchingStatusResponse(BaseModel):
     module: str
     status: str
@@ -101,3 +108,7 @@ class MatchListResponse(BaseModel):
     request_id: str
     total: int
     items: list[MatchSummary]
+
+
+class MatchAcceptRequest(BaseModel):
+    provider_user_id: str
