@@ -415,6 +415,47 @@ textarea:focus {
   font-family: "IBM Plex Mono", "Space Grotesk", monospace;
 }
 
+.quote-thumbs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.quote-thumb {
+  width: 96px;
+  height: 96px;
+  object-fit: cover;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+}
+
+.quote-price {
+  font-family: "Space Grotesk", var(--font-display);
+  font-size: 26px;
+  font-weight: 700;
+  color: var(--blueprint);
+}
+
+.scope-list {
+  margin: 6px 0 0;
+  padding-left: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 14px;
+}
+
+.scope-list.muted-list {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.publish-form {
+  margin-top: 4px;
+  border-top: 1px dashed var(--border);
+  padding-top: 14px;
+}
+
 .chat-panel {
   margin-top: 8px;
   border-top: 1px dashed var(--border);

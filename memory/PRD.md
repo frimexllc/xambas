@@ -20,19 +20,34 @@ El supervisor (config read-only) corre `uvicorn server:app` en `/app/backend:800
 
 ## Implementado en esta sesión (Jun 2026)
 - ✅ Stack completo corriendo en el preview (API + Mongo + app cliente), 19 categorías sembradas.
-- ✅ **Servicios recurrentes / suscripciones** (feature #1 del backlog del usuario):
-  - Backend `recurring`: crear suscripción (frecuencia weekly/biweekly/monthly), generar visitas (crea `service_request` real vía matching y registra `occurrence`, avanza `next_run_date`), pausar/reanudar/cancelar (máquina de estados con 409 correctos), listar por cliente y listar visitas.
-  - Frontend cliente: pestañas Solicitudes / Servicios recurrentes; formulario de nueva suscripción; lista con acciones (generar visita, pausar/reanudar/cancelar, ver visitas). data-testids en todos los interactivos.
-  - Validado por testing agent: backend 13/13, frontend happy path + regresión. Sin bugs.
+- ✅ **Servicios recurrentes / suscripciones** (feature #1 del backlog): módulo `recurring` + UI cliente. Testing: backend 13/13, frontend OK.
+- ✅ **Cotización con IA** (feature: fotos → alcance + rango de precio antes de contactar):
+  - Módulo `ai_quote`: subida de fotos, visión con **Groq** (modelo `qwen/qwen3.6-27b`; nota: `llama-4` NO estaba disponible en la cuenta), salida JSON validada con Pydantic, persistencia y servidor de imágenes con guardia de prefijo. Además permite **publicar una service_request** prellenada desde la estimación.
+  - Almacenamiento: **Emergent Object Storage** (sin llaves; el usuario dio la key de Groq pero omitió R2). Capa `core/storage.py` con interfaz mínima para migrar a **Cloudflare R2 (boto3)** después sin tocar el resto.
+  - UI cliente: 3ª pestaña "Cotización IA" (subir fotos, ver estimación, publicar). Testing: backend 10/10, frontend OK.
+  - Llaves usadas: `GROQ_API_KEY` (usuario), `EMERGENT_LLM_KEY` (storage). `max_tokens=4096` para evitar json_validate_failed.
+
+## Decisiones / pendientes de integración
+- R2 pendiente: el usuario no dio credenciales; cuando las dé, reimplementar `core/storage.py` con boto3 (S3-compatible) y variables R2_*.
+- Modelo de visión: cambiar a Llama 4 si la cuenta de Groq obtiene acceso (config `GROQ_VISION_MODEL`).
+
+## Implementado en esta sesión (histórico previo)
 
 ## Estado previo ya existente (verificado en repo)
 Registro+OTP, categorías/subcategorías, service_requests con matching automático, chat anti-fuga, reviews/reputación, pagos en custodia con Stripe Connect (requiere claves), panel admin y contenido de landing.
 
-## Backlog priorizado (elegido por el usuario)
-- P0 (siguiente): **Cotización asistida por IA a partir de fotos** (Fase 2 del estudio).
-- P1: **Pagos por etapas (milestones)** para proyectos grandes.
-- P1: **Panel de negocio del proveedor** (CRM ligero, facturación, métricas).
-- P2 / mejoras: exponer también web/provider/admin en preview; auth real por token en endpoints; refactor de `apps/client/src/App.jsx` (dividir componentes recurring en archivos propios); `next_run_date = max(next+delta, hoy)` si una suscripción estuvo pausada.
+## Backlog priorizado (elegido por el usuario, orden confirmado)
+1. ✅ Cotización con IA (hecho).
+2. ⏭️ **Pagos por etapas (milestones)** para proyectos grandes (extiende `billing`; Stripe test key `sk_test_emergent` ya en el entorno).
+3. **Panel de negocio del proveedor** (calendario, ingresos, métricas) — app `provider`.
+4. **Recurrentes en Provider** (ver/confirmar visitas recurrentes asignadas) — app `provider`.
+5. **Llaves reales**: Twilio (OTP SMS) — el usuario lo activará más tarde; R2 pendiente.
+
+## Deuda técnica / mejoras (no bloqueantes)
+- Auth por token en endpoints `/api/recurring/*` y `/api/ai-quote/*` (hoy solo por client_id, Fase 0).
+- Refactor: dividir `apps/client/src/App.jsx` (>1500 líneas) en archivos por pestaña (RequestsPanel, RecurringPanel, AiQuotePanel).
+- `ai_quote`: down-scale de imágenes (PIL) antes de enviar a Groq para grandes cargas.
+- Preview: exponer también web/provider/admin (hoy solo cliente; se alterna con `PREVIEW_APP`).
 
 ## Notas de negocio (posicionamiento vs competencia)
 Comisión escalonada por nivel ya modelada (`billing/tiers.py`). Servicios recurrentes refuerzan retención/lealtad (menor incentivo de fuga), alineado con la tesis del estudio.

@@ -26,6 +26,11 @@ class Settings(BaseSettings):
     twilio_account_sid: str = ""
     twilio_auth_token: str = ""
     twilio_verify_service_sid: str = ""
+    groq_api_key: str = ""
+    groq_vision_model: str = "qwen/qwen3.6-27b"
+    emergent_llm_key: str = ""
+    integration_proxy_url: str = "https://integrations.emergentagent.com"
+    storage_app_name: str = "xambas"
 
     model_config = SettingsConfigDict(
         env_file=".env",
