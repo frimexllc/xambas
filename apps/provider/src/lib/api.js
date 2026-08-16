@@ -78,6 +78,29 @@ export const api = {
     }),
   listPaymentsForProvider: (providerUserId) =>
     request(`/billing/payments?provider_user_id=${providerUserId}`),
+
+  // panel del proveedor (métricas + visitas recurrentes)
+  getDashboard: (providerUserId, providerProfileId) =>
+    request(
+      `/provider/dashboard?provider_user_id=${providerUserId}&provider_profile_id=${providerProfileId}`
+    ),
+
+  // pagos por etapas (hitos)
+  listMilestonePlansForProvider: (providerUserId) =>
+    request(`/milestones/plans?provider_user_id=${providerUserId}`),
+  submitMilestoneEvidence: async (planId, milestoneId, providerUserId, formData) => {
+    const response = await fetch(
+      `${BASE_URL}/milestones/plans/${planId}/milestones/${milestoneId}/submit?provider_user_id=${providerUserId}`,
+      { method: "POST", body: formData }
+    );
+    const raw = await response.text();
+    const data = raw ? JSON.parse(raw) : null;
+    if (!response.ok) {
+      const detail = data?.detail;
+      throw new Error((typeof detail === "string" ? detail : JSON.stringify(detail)) || `Error ${response.status}`);
+    }
+    return data;
+  },
 };
 
 export { BASE_URL };

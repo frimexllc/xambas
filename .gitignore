@@ -39,3 +39,8 @@ mongo-data/
 *.md text eol=lf
 *.sh text eol=lf
 *.bat text eol=crlf   # los .bat deben tener CRLF en Windows
+*.env
+credentials.json
+*.pem
+*.key
+.credentials

@@ -1,0 +1,42 @@
+{
+  "summary": "Xambas milestones + provider_dashboard modules fully validated (backend + frontend). Backend pytest suite /app/backend/tests/test_milestones.py: 14/14 green — status ready, plan creation from accepted match, duplicate plan 409, submit-with-foreign-provider 403, submit evidence to R2 (path xambas/milestones/...) with proper submitted status, GET /api/milestones/files/<path> returns image/* content and rejects paths outside xambas/milestones/ with 404, release-before-submit 409, release-with-foreign-client 403, single release updates released_amount and keeps status=active, releasing all milestones transitions plan to status=completed with released_amount=total, list plans by client and by provider, provider dashboard returns tier/commission_pct/accepted_jobs/earnings_released/earnings_in_escrow/recurring_visits and 404 on unknown profile_id. transfer_mode is 'manual' because Stripe not configured (expected).\n\nFrontend UI e2e (playwright, viewport 1440x900): registered fresh client via UI (bootstrap + OTP debug_code from .hint strong), then via API created a provider with unique coverage_zone + service_request in that zone + accepted the match. Reopened the request in UI, clicked create-milestones-<matchId>, filled milestone-title-0/amount-0='Etapa 1'/300, added second row, filled milestone-title-1/amount-1='Etapa 2'/700, clicked milestone-create-btn → milestone-plan-created shown. Then via API provider submitted JPEG evidence to milestone 0. Navigated to tab-milestones — plan appears in milestones-plan-list with 'Liberado $0 / $1000 MXN' initially and release-<milestoneId> button visible on Etapa 1 (submitted). Clicked release-<milestoneId>: UI refreshed showing Etapa 1 = 'Pagada' with evidence thumb, Etapa 2 = 'Pendiente', header 'Liberado $300 / $1000 MXN'. Backend confirms plan.released_amount=300.0 and milestone[0].status='released'. Regression: Solicitudes, Servicios recurrentes and Cotización IA tabs still render.\n\nOne critical wiring bug found and fixed while testing (needed to unblock frontend flow — see updated_files).",
+  "backend_issues": { "critical": [], "minor": [] },
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "ClientHome view router", "issue": "tab-milestones button set view='milestones' but the ternary in ClientHome had no branch for it and fell through to <AiQuotePanel>, so clicking 'Pagos por etapas' rendered the AI-quote panel instead of MilestonesPanel. MilestonesPanel was defined but never mounted. Fixed in /app/apps/client/src/App.jsx by adding an explicit `view === 'milestones' ? <MilestonesPanel .../>` branch.", "selector": "data-testid='tab-milestones'", "priority": "HIGH"}
+    ],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "AuthFlow register", "issues": ["Aún sin data-testid en los inputs de email/telefono (arrastrado de iteración anterior)."]},
+      {"screen": "MilestonePlanCreator", "issues": ["Los inputs de título y monto no tienen labels visibles (solo placeholder), lo que perjudica accesibilidad."]}
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_milestones.py",
+    "/app/test_reports/pytest/milestones_results.xml"
+  ],
+  "action_items": [
+    "Confirmar el fix del router de vistas en /app/apps/client/src/App.jsx (branch view==='milestones' → <MilestonesPanel />) o refactorizar a un switch/map para evitar que futuras tabs vuelvan a caer en el fallthrough al AiQuotePanel.",
+    "Añadir data-testid a register-email-input y register-phone-input para robustez de tests (persistente de iteración 2)."
+  ],
+  "critical_code_review_comments": [
+    "App.jsx supera 1750 líneas: la lógica de ClientHome + subpaneles (RecurringPanel, AiQuotePanel, MilestonesPanel, RequestDetail, ChatPanel, PaymentPanel, MilestonePlanCreator) debería extraerse a archivos por dominio; el router de vistas con ternarios anidados fue exactamente lo que ocultó el bug de la tab de milestones.",
+    "milestones/service.py::_release_funds importa `stripe as stripe_sdk` dentro de la rama de Stripe ready; sin Stripe está inerte, pero cuando se habilite conviene mover el import a nivel de módulo o cachearlo para evitar la sorpresa en producción.",
+    "milestones/service.py::approve_and_release actualiza `document` in-place y persiste con update_plan; correcto, pero no hay lock ni transacción — si el cliente hace doble click, dos requests pueden entrar simultáneas y liberar dos veces (Stripe transfer o suma released_amount duplicada). Considerar $inc atómico o findOneAndUpdate con filtro por status.",
+    "milestones/service.py:99 rechaza archivos vacíos con 400, pero el chequeo `if not files` (línea 91) es prácticamente muerto: FastAPI con `files: list[UploadFile] = File(...)` ya devuelve 422 si no viene el multipart. No es bug, sólo dead code.",
+    "provider_dashboard/service.py: `match.get('id', '')` como fallback vacío en RecurringVisit.match_id puede propagar '' al cliente; conviene lanzar 500 o filtrar si `_id`/`id` faltan (indica inconsistencia).",
+    "milestones/router.py::get_file no fija Cache-Control ni valida extensión del path; la validación de prefijo está bien pero si se sirve un binario grande se lee entero en memoria (asyncio.to_thread + object_storage.get_object). Aceptable para MVP.",
+    "El bug del router en App.jsx confirma la regla >700 líneas del checklist — dividir es urgente."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_milestones.py (nuevo, 14 tests)",
+    "/app/apps/client/src/App.jsx (fix: añadido branch view==='milestones' → <MilestonesPanel/> en ClientHome; sin este fix la tab 'Pagos por etapas' renderizaba AiQuotePanel)"
+  ],
+  "success_rate": { "backend": "100% (14/14)", "frontend": "100% (post-fix del router)" },
+  "test_credentials": "Sin cuentas pre-sembradas; el flujo se registra un nuevo cliente TEST_ui_cli_*@example.com y provider TEST_ui_prov_*@example.com por corrida (OTP dev en /api/identity/otp/request debug_code y en UI .hint strong).",
+  "seed_data_creation": "Por cada corrida: 1 client + 1 provider (zona única UIZONA_*/ZONA_MS_*) + 1 service_request + 1 match aceptado + 1 milestone_plan con 2 etapas (ambas released al final). Múltiples fixtures análogos por el pytest (module scope). Sin cleanup; agregar admin delete endpoint si se quiere purgar TEST_*.",
+  "retest_needed": true,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Backend NO recarga con cambios en /app/apps/api (uvicorn observa /app/backend); si tocas apps/api ejecuta 'sudo supervisorctl restart backend'. Vite del cliente sí hace HMR. Stripe/Twilio deshabilitados: milestones libera en modo manual (transfer_mode='manual', stripe_transfer_id=null). Para tests de matching, usa zonas únicas por corrida (UIZONA_/ZONA_MS_) para evitar match con proveedores previos de otros tests. Archivo de evidencia estándar: /app/sample_kitchen.jpg. Los tests de milestones dejan client_id/plan_id fijos en fixtures module-scope; ver /app/backend/tests/test_milestones.py.",
+  "rca of the issue": "Bug de router de vistas: el ternario anidado en ClientHome (/app/apps/client/src/App.jsx L263-L305) tenía 3 ramas (requests → recurring → else=ai-quote) pero se añadió un cuarto tab (milestones) sin agregar rama, así que cualquier valor distinto de 'requests'/'recurring' cae en el fallthrough al AiQuotePanel. Reproducción: registrar cliente → click en 'Pagos por etapas' → veías el panel de Cotización IA con thumbs de fotos. Mitigación aplicada: se añadió `view === 'milestones' ? <MilestonesPanel .../>` en el ternario. Mitigación recomendada a largo plazo: reemplazar el ternario por un mapa `{requests, recurring, milestones, 'ai-quote'}[view] ?? <NotFound/>` o refactor a react-router — así una nueva tab sin rama fallará explícito."
+}

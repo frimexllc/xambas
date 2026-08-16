@@ -71,6 +71,55 @@ export const api = {
     request(`/billing/payments/${paymentId}/confirm-completion?client_id=${clientId}`, {
       method: "POST",
     }),
+
+  // servicios recurrentes / suscripciones
+  listSubscriptions: (clientId) =>
+    request(`/recurring/subscriptions?client_id=${clientId}`),
+  createSubscription: (payload) =>
+    request("/recurring/subscriptions", { method: "POST", body: JSON.stringify(payload) }),
+  pauseSubscription: (subscriptionId) =>
+    request(`/recurring/subscriptions/${subscriptionId}/pause`, { method: "POST" }),
+  resumeSubscription: (subscriptionId) =>
+    request(`/recurring/subscriptions/${subscriptionId}/resume`, { method: "POST" }),
+  cancelSubscription: (subscriptionId) =>
+    request(`/recurring/subscriptions/${subscriptionId}/cancel`, { method: "POST" }),
+  generateOccurrence: (subscriptionId) =>
+    request(`/recurring/subscriptions/${subscriptionId}/generate`, { method: "POST" }),
+  listOccurrences: (subscriptionId) =>
+    request(`/recurring/subscriptions/${subscriptionId}/occurrences`),
+
+  // cotización con IA (Groq visión)
+  createEstimate: async (formData) => {
+    let response;
+    try {
+      response = await fetch(`${BASE_URL}/ai-quote/estimate`, {
+        method: "POST",
+        body: formData,
+      });
+    } catch (networkError) {
+      throw new Error(`No se pudo conectar con la API en ${BASE_URL}. (${networkError.message})`);
+    }
+    const raw = await response.text();
+    const data = raw ? JSON.parse(raw) : null;
+    if (!response.ok) {
+      const detail = data?.detail;
+      const message = typeof detail === "string" ? detail : JSON.stringify(detail ?? data);
+      throw new Error(message || `Error ${response.status}`);
+    }
+    return data;
+  },
+  listEstimates: (clientId) => request(`/ai-quote/estimates?client_id=${clientId}`),
+  getEstimate: (quoteId) => request(`/ai-quote/estimates/${quoteId}`),
+
+  // pagos por etapas (hitos)
+  listMilestonePlansForClient: (clientId) =>
+    request(`/milestones/plans?client_id=${clientId}`),
+  createMilestonePlan: (payload) =>
+    request("/milestones/plans", { method: "POST", body: JSON.stringify(payload) }),
+  releaseMilestone: (planId, milestoneId, clientId) =>
+    request(`/milestones/plans/${planId}/milestones/${milestoneId}/release?client_id=${clientId}`, {
+      method: "POST",
+    }),
 };
 
 export { BASE_URL };

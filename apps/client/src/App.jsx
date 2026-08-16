@@ -185,6 +185,7 @@ function ClientHome({ session, onError }) {
   const [categories, setCategories] = useState([]);
   const [requests, setRequests] = useState([]);
   const [selectedRequestId, setSelectedRequestId] = useState(null);
+  const [view, setView] = useState("requests");
   const [loading, setLoading] = useState(true);
 
   async function refresh() {
@@ -223,38 +224,475 @@ function ClientHome({ session, onError }) {
   }
 
   return (
-    <div className="grid-2">
+    <div className="stack">
+      <nav className="tab-bar" data-testid="client-tabs">
+        <button
+          type="button"
+          className={`tab ${view === "requests" ? "tab-active" : ""}`}
+          onClick={() => setView("requests")}
+          data-testid="tab-requests"
+        >
+          Solicitudes
+        </button>
+        <button
+          type="button"
+          className={`tab ${view === "recurring" ? "tab-active" : ""}`}
+          onClick={() => setView("recurring")}
+          data-testid="tab-recurring"
+        >
+          Servicios recurrentes
+        </button>
+        <button
+          type="button"
+          className={`tab ${view === "ai-quote" ? "tab-active" : ""}`}
+          onClick={() => setView("ai-quote")}
+          data-testid="tab-ai-quote"
+        >
+          Cotización IA
+        </button>
+        <button
+          type="button"
+          className={`tab ${view === "milestones" ? "tab-active" : ""}`}
+          onClick={() => setView("milestones")}
+          data-testid="tab-milestones"
+        >
+          Pagos por etapas
+        </button>
+      </nav>
+
+      {view === "requests" ? (
+        <div className="grid-2">
+          <section className="card">
+            <h2>Nueva solicitud de servicio</h2>
+            <NewRequestForm
+              categories={categories}
+              session={session}
+              onCreated={(requestId) => setSelectedRequestId(requestId)}
+              onError={onError}
+            />
+          </section>
+
+          <section className="card">
+            <h2>Tus solicitudes</h2>
+            {loading && <p className="muted">Cargando...</p>}
+            {!loading && requests.length === 0 && (
+              <p className="muted">Aun no has creado ninguna solicitud.</p>
+            )}
+            <ul className="request-list">
+              {requests.map((request) => (
+                <li key={request.id}>
+                  <button
+                    className="request-item"
+                    onClick={() => setSelectedRequestId(request.id)}
+                    data-testid={`request-item-${request.id}`}
+                  >
+                    <div>
+                      <strong>{request.title}</strong>
+                      <p className="muted">{request.category_name} · {request.city}</p>
+                    </div>
+                    <StatusBadge status={request.status} />
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </section>
+        </div>
+      ) : view === "recurring" ? (
+        <RecurringPanel session={session} categories={categories} onError={onError} />
+      ) : view === "milestones" ? (
+        <MilestonesPanel session={session} onError={onError} />
+      ) : (
+        <AiQuotePanel session={session} categories={categories} onError={onError} />
+      )}
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Servicios recurrentes: suscripciones y visitas programadas
+// ---------------------------------------------------------------------------
+
+const FREQUENCY_LABELS = {
+  weekly: "Semanal",
+  biweekly: "Quincenal",
+  monthly: "Mensual",
+};
+
+const SUBSCRIPTION_STATUS_LABELS = {
+  active: "Activa",
+  paused: "En pausa",
+  cancelled: "Cancelada",
+};
+
+function RecurringPanel({ session, categories, onError }) {
+  const [subscriptions, setSubscriptions] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [openOccurrencesId, setOpenOccurrencesId] = useState(null);
+
+  async function refresh() {
+    setLoading(true);
+    try {
+      const response = await api.listSubscriptions(session.userId);
+      setSubscriptions(response.items);
+    } catch (err) {
+      onError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    refresh();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  return (
+    <div className="grid-2" data-testid="recurring-panel">
       <section className="card">
-        <h2>Nueva solicitud de servicio</h2>
-        <NewRequestForm
+        <h2>Nueva suscripción</h2>
+        <p className="muted">
+          Programa un servicio que se repite (limpieza semanal, mantenimiento mensual) y genera
+          cada visita con proveedores verificados, sin volver a publicar desde cero.
+        </p>
+        <NewSubscriptionForm
           categories={categories}
           session={session}
-          onCreated={(requestId) => setSelectedRequestId(requestId)}
+          onCreated={refresh}
           onError={onError}
         />
       </section>
 
       <section className="card">
-        <h2>Tus solicitudes</h2>
+        <h2>Tus suscripciones</h2>
         {loading && <p className="muted">Cargando...</p>}
-        {!loading && requests.length === 0 && (
-          <p className="muted">Aun no has creado ninguna solicitud.</p>
+        {!loading && subscriptions.length === 0 && (
+          <p className="muted">Aún no tienes servicios recurrentes.</p>
         )}
-        <ul className="request-list">
-          {requests.map((request) => (
-            <li key={request.id}>
-              <button className="request-item" onClick={() => setSelectedRequestId(request.id)}>
-                <div>
-                  <strong>{request.title}</strong>
-                  <p className="muted">{request.category_name} · {request.city}</p>
-                </div>
-                <StatusBadge status={request.status} />
-              </button>
-            </li>
+        <ul className="request-list" data-testid="subscription-list">
+          {subscriptions.map((subscription) => (
+            <SubscriptionItem
+              key={subscription.id}
+              subscription={subscription}
+              isOpen={openOccurrencesId === subscription.id}
+              onToggleOccurrences={() =>
+                setOpenOccurrencesId(
+                  openOccurrencesId === subscription.id ? null : subscription.id
+                )
+              }
+              onChanged={refresh}
+              onError={onError}
+            />
           ))}
         </ul>
       </section>
     </div>
+  );
+}
+
+function NewSubscriptionForm({ categories, session, onCreated, onError }) {
+  const [submitting, setSubmitting] = useState(false);
+  const emptyForm = {
+    categoryId: "",
+    title: "",
+    description: "",
+    city: "",
+    coverageZone: "",
+    frequency: "weekly",
+    budgetAmount: "",
+    startDate: "",
+    preferredTime: "",
+  };
+  const [form, setForm] = useState(emptyForm);
+
+  async function handleSubmit(event) {
+    event.preventDefault();
+    if (!form.categoryId) {
+      onError("Selecciona una categoría.");
+      return;
+    }
+    setSubmitting(true);
+    try {
+      await api.createSubscription({
+        client_id: session.userId,
+        category_id: form.categoryId,
+        title: form.title.trim(),
+        description: form.description.trim(),
+        country_code: COUNTRY_CODE,
+        city: form.city.trim(),
+        coverage_zone: form.coverageZone.trim(),
+        frequency: form.frequency,
+        budget_amount: form.budgetAmount ? Number(form.budgetAmount) : null,
+        start_date: form.startDate || null,
+        preferred_time: form.preferredTime.trim() || null,
+      });
+      setForm(emptyForm);
+      onCreated();
+    } catch (err) {
+      onError(err.message);
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  return (
+    <form onSubmit={handleSubmit} className="stack" data-testid="new-subscription-form">
+      <label>
+        Categoría
+        <select
+          required
+          value={form.categoryId}
+          onChange={(e) => setForm({ ...form, categoryId: e.target.value })}
+          data-testid="subscription-category-select"
+        >
+          <option value="">Selecciona una categoría</option>
+          {categories.map((category) => (
+            <option key={category.id} value={category.id}>
+              {category.parent_id ? `— ${category.name}` : category.name}
+            </option>
+          ))}
+        </select>
+      </label>
+      <label>
+        Título
+        <input
+          required
+          minLength={4}
+          maxLength={140}
+          value={form.title}
+          onChange={(e) => setForm({ ...form, title: e.target.value })}
+          placeholder="Limpieza semanal del departamento"
+          data-testid="subscription-title-input"
+        />
+      </label>
+      <label>
+        Descripción
+        <textarea
+          required
+          minLength={10}
+          maxLength={2000}
+          rows={2}
+          value={form.description}
+          onChange={(e) => setForm({ ...form, description: e.target.value })}
+          placeholder="Qué necesitas en cada visita"
+          data-testid="subscription-description-input"
+        />
+      </label>
+      <div className="row">
+        <label>
+          Ciudad
+          <input
+            required
+            value={form.city}
+            onChange={(e) => setForm({ ...form, city: e.target.value })}
+            placeholder="CDMX"
+            data-testid="subscription-city-input"
+          />
+        </label>
+        <label>
+          Zona de cobertura
+          <input
+            required
+            value={form.coverageZone}
+            onChange={(e) => setForm({ ...form, coverageZone: e.target.value })}
+            placeholder="Roma Norte"
+            data-testid="subscription-zone-input"
+          />
+        </label>
+      </div>
+      <div className="row">
+        <label>
+          Frecuencia
+          <select
+            value={form.frequency}
+            onChange={(e) => setForm({ ...form, frequency: e.target.value })}
+            data-testid="subscription-frequency-select"
+          >
+            {Object.entries(FREQUENCY_LABELS).map(([value, label]) => (
+              <option key={value} value={value}>
+                {label}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label>
+          Primera visita (opcional)
+          <input
+            type="date"
+            value={form.startDate}
+            onChange={(e) => setForm({ ...form, startDate: e.target.value })}
+            data-testid="subscription-start-input"
+          />
+        </label>
+      </div>
+      <div className="row">
+        <label>
+          Presupuesto por visita (opcional)
+          <input
+            type="number"
+            min="0"
+            value={form.budgetAmount}
+            onChange={(e) => setForm({ ...form, budgetAmount: e.target.value })}
+            placeholder="450"
+            data-testid="subscription-budget-input"
+          />
+        </label>
+        <label>
+          Horario preferido (opcional)
+          <input
+            value={form.preferredTime}
+            onChange={(e) => setForm({ ...form, preferredTime: e.target.value })}
+            placeholder="10:00"
+            data-testid="subscription-time-input"
+          />
+        </label>
+      </div>
+      <button
+        className="btn btn-primary"
+        type="submit"
+        disabled={submitting}
+        data-testid="subscription-submit-btn"
+      >
+        {submitting ? "Creando suscripción..." : "Crear servicio recurrente"}
+      </button>
+    </form>
+  );
+}
+
+function SubscriptionItem({ subscription, isOpen, onToggleOccurrences, onChanged, onError }) {
+  const [busy, setBusy] = useState(false);
+
+  async function runAction(action) {
+    setBusy(true);
+    try {
+      await action();
+      onChanged();
+    } catch (err) {
+      onError(err.message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  const isActive = subscription.status === "active";
+  const isCancelled = subscription.status === "cancelled";
+
+  return (
+    <li className="match-item" data-testid={`subscription-item-${subscription.id}`}>
+      <div className="space-between">
+        <div>
+          <strong>{subscription.title}</strong>
+          <p className="muted">
+            {subscription.category_name} · {FREQUENCY_LABELS[subscription.frequency]} ·{" "}
+            {subscription.coverage_zone}
+          </p>
+        </div>
+        <span className={`badge badge-${subscription.status}`}>
+          {SUBSCRIPTION_STATUS_LABELS[subscription.status] || subscription.status}
+        </span>
+      </div>
+
+      <div className="sub-meta">
+        <span>
+          Próxima visita: <strong>{subscription.next_run_date}</strong>
+        </span>
+        <span>
+          Visitas generadas: <strong>{subscription.occurrences_count}</strong>
+        </span>
+        {subscription.budget_amount != null && (
+          <span>
+            Presupuesto: <strong>${subscription.budget_amount}</strong>
+          </span>
+        )}
+      </div>
+
+      <div className="row sub-actions">
+        {isActive && (
+          <button
+            className="btn btn-primary"
+            disabled={busy}
+            onClick={() => runAction(() => api.generateOccurrence(subscription.id))}
+            data-testid={`subscription-generate-${subscription.id}`}
+          >
+            {busy ? "Generando..." : "Generar próxima visita"}
+          </button>
+        )}
+        {isActive && (
+          <button
+            className="btn btn-secondary"
+            disabled={busy}
+            onClick={() => runAction(() => api.pauseSubscription(subscription.id))}
+            data-testid={`subscription-pause-${subscription.id}`}
+          >
+            Pausar
+          </button>
+        )}
+        {subscription.status === "paused" && (
+          <button
+            className="btn btn-secondary"
+            disabled={busy}
+            onClick={() => runAction(() => api.resumeSubscription(subscription.id))}
+            data-testid={`subscription-resume-${subscription.id}`}
+          >
+            Reanudar
+          </button>
+        )}
+        {!isCancelled && (
+          <button
+            className="btn btn-ghost"
+            disabled={busy}
+            onClick={() => runAction(() => api.cancelSubscription(subscription.id))}
+            data-testid={`subscription-cancel-${subscription.id}`}
+          >
+            Cancelar
+          </button>
+        )}
+        {subscription.occurrences_count > 0 && (
+          <button
+            className="btn btn-ghost"
+            onClick={onToggleOccurrences}
+            data-testid={`subscription-occurrences-${subscription.id}`}
+          >
+            {isOpen ? "Ocultar visitas" : "Ver visitas"}
+          </button>
+        )}
+      </div>
+
+      {isOpen && <OccurrencesList subscriptionId={subscription.id} onError={onError} />}
+    </li>
+  );
+}
+
+function OccurrencesList({ subscriptionId, onError }) {
+  const [occurrences, setOccurrences] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    (async () => {
+      setLoading(true);
+      try {
+        const response = await api.listOccurrences(subscriptionId);
+        setOccurrences(response.items);
+      } catch (err) {
+        onError(err.message);
+      } finally {
+        setLoading(false);
+      }
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [subscriptionId]);
+
+  if (loading) return <p className="muted">Cargando visitas...</p>;
+  if (occurrences.length === 0) return <p className="muted">Sin visitas generadas todavía.</p>;
+
+  return (
+    <ul className="occurrence-list" data-testid={`occurrences-${subscriptionId}`}>
+      {occurrences.map((occurrence, index) => (
+        <li key={occurrence.id} className="occurrence-item">
+          <span>Visita #{occurrences.length - index}</span>
+          <strong>{occurrence.scheduled_date}</strong>
+        </li>
+      ))}
+    </ul>
   );
 }
 
@@ -382,6 +820,7 @@ function RequestDetail({ session, requestId, onBack, onError }) {
   const [activeMatchId, setActiveMatchId] = useState(null);
   const [reviewMatchId, setReviewMatchId] = useState(null);
   const [paymentMatchId, setPaymentMatchId] = useState(null);
+  const [milestoneMatchId, setMilestoneMatchId] = useState(null);
 
   async function refresh() {
     setLoading(true);
@@ -462,6 +901,15 @@ function RequestDetail({ session, requestId, onBack, onError }) {
                   </button>
                 )}
                 {match.status === "accepted" && (
+                  <button
+                    className="btn btn-secondary"
+                    onClick={() => setMilestoneMatchId(match.id)}
+                    data-testid={`create-milestones-${match.id}`}
+                  >
+                    Plan por etapas
+                  </button>
+                )}
+                {match.status === "accepted" && (
                   <button className="btn btn-secondary" onClick={() => setReviewMatchId(match)}>
                     Dejar resena
                   </button>
@@ -481,6 +929,14 @@ function RequestDetail({ session, requestId, onBack, onError }) {
                   match={match}
                   session={session}
                   onClose={() => setPaymentMatchId(null)}
+                  onError={onError}
+                />
+              )}
+              {milestoneMatchId === match.id && (
+                <MilestonePlanCreator
+                  matchId={match.id}
+                  session={session}
+                  onClose={() => setMilestoneMatchId(null)}
                   onError={onError}
                 />
               )}
@@ -856,6 +1312,436 @@ function ReviewForm({ requestId, clientId, match, onDone, onError }) {
         {submitting ? "Enviando..." : "Enviar resena"}
       </button>
     </form>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Cotización con IA: sube fotos y recibe alcance + precio estimado
+// ---------------------------------------------------------------------------
+
+function AiQuotePanel({ session, categories, onError }) {
+  const [categoryId, setCategoryId] = useState("");
+  const [notes, setNotes] = useState("");
+  const [files, setFiles] = useState([]);
+  const [analyzing, setAnalyzing] = useState(false);
+  const [quote, setQuote] = useState(null);
+  const [history, setHistory] = useState([]);
+
+  async function refreshHistory() {
+    try {
+      const response = await api.listEstimates(session.userId);
+      setHistory(response.items);
+    } catch (err) {
+      onError(err.message);
+    }
+  }
+
+  useEffect(() => {
+    refreshHistory();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  async function handleAnalyze(event) {
+    event.preventDefault();
+    if (!categoryId) return onError("Selecciona una categoría.");
+    if (files.length === 0) return onError("Sube al menos una foto del trabajo.");
+    setAnalyzing(true);
+    setQuote(null);
+    try {
+      const formData = new FormData();
+      formData.append("client_id", session.userId);
+      formData.append("category_id", categoryId);
+      if (notes.trim()) formData.append("notes", notes.trim());
+      files.forEach((file) => formData.append("files", file));
+      const response = await api.createEstimate(formData);
+      setQuote(response.quote);
+      refreshHistory();
+    } catch (err) {
+      onError(err.message);
+    } finally {
+      setAnalyzing(false);
+    }
+  }
+
+  return (
+    <div className="grid-2" data-testid="ai-quote-panel">
+      <section className="card">
+        <h2>Cotización con IA</h2>
+        <p className="muted">
+          Sube fotos del trabajo y nuestra IA estima el alcance y un rango de precio en segundos,
+          antes de contactar a ningún proveedor. Sin sorpresas, sin llamadas de venta.
+        </p>
+        <form onSubmit={handleAnalyze} className="stack" data-testid="ai-quote-form">
+          <label>
+            Categoría
+            <select
+              required
+              value={categoryId}
+              onChange={(e) => setCategoryId(e.target.value)}
+              data-testid="ai-quote-category-select"
+            >
+              <option value="">Selecciona una categoría</option>
+              {categories.map((category) => (
+                <option key={category.id} value={category.id}>
+                  {category.parent_id ? `— ${category.name}` : category.name}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label>
+            Fotos del trabajo (hasta 5)
+            <input
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              multiple
+              onChange={(e) => setFiles(Array.from(e.target.files).slice(0, 5))}
+              data-testid="ai-quote-files-input"
+            />
+          </label>
+          {files.length > 0 && (
+            <p className="muted" data-testid="ai-quote-files-count">
+              {files.length} foto(s) seleccionada(s)
+            </p>
+          )}
+          <label>
+            Notas (opcional)
+            <textarea
+              rows={2}
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              placeholder="Describe detalles útiles: medidas, materiales, urgencia..."
+              data-testid="ai-quote-notes-input"
+            />
+          </label>
+          <button
+            className="btn btn-primary"
+            type="submit"
+            disabled={analyzing}
+            data-testid="ai-quote-submit-btn"
+          >
+            {analyzing ? "Analizando fotos con IA..." : "Analizar y estimar precio"}
+          </button>
+        </form>
+      </section>
+
+      <section className="card">
+        {quote ? (
+          <QuoteResult quote={quote} session={session} onError={onError} />
+        ) : (
+          <>
+            <h2>Tus cotizaciones</h2>
+            {history.length === 0 && (
+              <p className="muted">Aún no has generado cotizaciones con IA.</p>
+            )}
+            <ul className="request-list" data-testid="ai-quote-history">
+              {history.map((item) => (
+                <li key={item.id}>
+                  <button
+                    className="request-item"
+                    onClick={() => setQuote(item)}
+                    data-testid={`ai-quote-history-${item.id}`}
+                  >
+                    <div>
+                      <strong>{item.suggested_title}</strong>
+                      <p className="muted">
+                        {item.category_name || "Sin categoría"} · ${item.price_min}–${item.price_max}{" "}
+                        {item.currency}
+                      </p>
+                    </div>
+                    <span className="badge badge-ready">{Math.round(item.confidence * 100)}%</span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </>
+        )}
+      </section>
+    </div>
+  );
+}
+
+function QuoteResult({ quote, session, onError }) {
+  return (
+    <div className="stack" data-testid="ai-quote-result">
+      <div className="space-between">
+        <h2>Estimación de IA</h2>
+        <span className="badge badge-ready">Confianza {Math.round(quote.confidence * 100)}%</span>
+      </div>
+
+      {quote.images.length > 0 && (
+        <div className="quote-thumbs">
+          {quote.images.map((image) => (
+            <img key={image.path} src={image.url} alt="foto del trabajo" className="quote-thumb" />
+          ))}
+        </div>
+      )}
+
+      <div className="quote-price" data-testid="ai-quote-price">
+        ${quote.price_min.toLocaleString()} – ${quote.price_max.toLocaleString()} {quote.currency}
+      </div>
+
+      <div>
+        <h3>Alcance estimado</h3>
+        <ul className="scope-list">
+          {quote.scope.map((item, index) => (
+            <li key={index}>{item}</li>
+          ))}
+        </ul>
+      </div>
+
+      {quote.assumptions.length > 0 && (
+        <div>
+          <h3>Supuestos</h3>
+          <ul className="scope-list muted-list">
+            {quote.assumptions.map((item, index) => (
+              <li key={index}>{item}</li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      <PublishFromQuote quote={quote} session={session} onError={onError} />
+    </div>
+  );
+}
+
+function PublishFromQuote({ quote, session, onError }) {
+  const [city, setCity] = useState("");
+  const [coverageZone, setCoverageZone] = useState("");
+  const [publishing, setPublishing] = useState(false);
+  const [publishedId, setPublishedId] = useState(null);
+
+  async function handlePublish(event) {
+    event.preventDefault();
+    if (!quote.category_id) return onError("Esta cotización no tiene categoría para publicar.");
+    setPublishing(true);
+    try {
+      const response = await api.createServiceRequest({
+        client_id: session.userId,
+        category_id: quote.category_id,
+        title: quote.suggested_title,
+        description: quote.suggested_description,
+        country_code: COUNTRY_CODE,
+        city: city.trim(),
+        coverage_zone: coverageZone.trim(),
+        budget_amount: quote.price_min || null,
+      });
+      setPublishedId(response.request.id);
+    } catch (err) {
+      onError(err.message);
+    } finally {
+      setPublishing(false);
+    }
+  }
+
+  if (publishedId) {
+    return (
+      <p className="hint" data-testid="ai-quote-published">
+        ✅ Solicitud publicada con esta estimación. Revísala en la pestaña “Solicitudes”.
+      </p>
+    );
+  }
+
+  return (
+    <form onSubmit={handlePublish} className="publish-form stack" data-testid="ai-quote-publish-form">
+      <h3>Publicar solicitud con esta estimación</h3>
+      <p className="muted">
+        Usaremos el alcance, el título y el precio estimado. Solo dinos dónde es el trabajo.
+      </p>
+      <div className="row">
+        <label>
+          Ciudad
+          <input
+            required
+            value={city}
+            onChange={(e) => setCity(e.target.value)}
+            placeholder="CDMX"
+            data-testid="ai-quote-city-input"
+          />
+        </label>
+        <label>
+          Zona de cobertura
+          <input
+            required
+            value={coverageZone}
+            onChange={(e) => setCoverageZone(e.target.value)}
+            placeholder="Roma Norte"
+            data-testid="ai-quote-zone-input"
+          />
+        </label>
+      </div>
+      <button
+        className="btn btn-secondary"
+        type="submit"
+        disabled={publishing}
+        data-testid="ai-quote-publish-btn"
+      >
+        {publishing ? "Publicando..." : "Publicar solicitud"}
+      </button>
+    </form>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Pagos por etapas (hitos): crear plan y liberar fase por fase
+// ---------------------------------------------------------------------------
+
+const MS_STATUS_LABELS = { pending: "Pendiente", submitted: "Evidencia enviada", released: "Pagada" };
+
+function MilestonePlanCreator({ matchId, session, onClose, onError }) {
+  const [rows, setRows] = useState([{ title: "", amount: "" }]);
+  const [saving, setSaving] = useState(false);
+  const [created, setCreated] = useState(false);
+
+  function updateRow(index, field, value) {
+    setRows((prev) => prev.map((r, i) => (i === index ? { ...r, [field]: value } : r)));
+  }
+
+  async function handleCreate(event) {
+    event.preventDefault();
+    const milestones = rows
+      .filter((r) => r.title.trim() && Number(r.amount) > 0)
+      .map((r) => ({ title: r.title.trim(), amount: Number(r.amount) }));
+    if (milestones.length === 0) return onError("Agrega al menos una etapa con título y monto.");
+    setSaving(true);
+    try {
+      await api.createMilestonePlan({ match_id: matchId, client_id: session.userId, currency: "MXN", milestones });
+      setCreated(true);
+    } catch (err) {
+      onError(err.message);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  if (created) {
+    return (
+      <div className="payment-panel">
+        <p className="hint" data-testid="milestone-plan-created">
+          ✅ Plan por etapas creado. Gestiónalo en la pestaña “Pagos por etapas”.
+        </p>
+        <button className="btn btn-ghost" onClick={onClose}>Cerrar</button>
+      </div>
+    );
+  }
+
+  return (
+    <form onSubmit={handleCreate} className="payment-panel stack" data-testid="milestone-creator">
+      <div className="space-between">
+        <strong>Nuevo plan por etapas</strong>
+        <button type="button" className="btn btn-ghost" onClick={onClose}>Cerrar</button>
+      </div>
+      <p className="muted">Divide el trabajo en fases; el proveedor sube evidencia y tú liberas cada pago.</p>
+      {rows.map((row, index) => (
+        <div className="row" key={index}>
+          <input
+            placeholder="Etapa (ej. Anticipo)"
+            value={row.title}
+            onChange={(e) => updateRow(index, "title", e.target.value)}
+            data-testid={`milestone-title-${index}`}
+          />
+          <input
+            type="number"
+            min="1"
+            placeholder="Monto"
+            value={row.amount}
+            onChange={(e) => updateRow(index, "amount", e.target.value)}
+            data-testid={`milestone-amount-${index}`}
+          />
+        </div>
+      ))}
+      <div className="row">
+        <button type="button" className="btn btn-ghost" onClick={() => setRows([...rows, { title: "", amount: "" }])}>
+          + Añadir etapa
+        </button>
+        <button className="btn btn-primary" type="submit" disabled={saving} data-testid="milestone-create-btn">
+          {saving ? "Creando..." : "Crear plan"}
+        </button>
+      </div>
+    </form>
+  );
+}
+
+function MilestonesPanel({ session, onError }) {
+  const [plans, setPlans] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  async function refresh() {
+    setLoading(true);
+    try {
+      const response = await api.listMilestonePlansForClient(session.userId);
+      setPlans(response.items);
+    } catch (err) {
+      onError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    refresh();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  async function release(planId, milestoneId) {
+    try {
+      await api.releaseMilestone(planId, milestoneId, session.userId);
+      refresh();
+    } catch (err) {
+      onError(err.message);
+    }
+  }
+
+  return (
+    <section className="card" data-testid="milestones-panel">
+      <h2>Pagos por etapas</h2>
+      <p className="muted">
+        Para trabajos grandes: liberas el pago fase por fase, solo cuando el proveedor sube evidencia
+        y tú la apruebas. Crea un plan desde un trabajo aceptado en “Solicitudes”.
+      </p>
+      {loading && <p className="muted">Cargando...</p>}
+      {!loading && plans.length === 0 && <p className="muted">Aún no tienes planes por etapas.</p>}
+      <ul className="request-list" data-testid="milestones-plan-list">
+        {plans.map((plan) => (
+          <li key={plan.id} className="match-item" data-testid={`plan-${plan.id}`}>
+            <div className="space-between">
+              <strong>Trabajo #{plan.request_id.slice(-6)}</strong>
+              <span className="muted">
+                Liberado ${plan.released_amount} / ${plan.total_amount} {plan.currency}
+              </span>
+            </div>
+            <ul className="milestone-list">
+              {plan.milestones.map((milestone) => (
+                <li key={milestone.id} className="milestone-row">
+                  <div className="space-between">
+                    <span>{milestone.title} · <strong>${milestone.amount}</strong></span>
+                    <span className={`badge badge-${milestone.status}`}>
+                      {MS_STATUS_LABELS[milestone.status]}
+                    </span>
+                  </div>
+                  {milestone.evidence.length > 0 && (
+                    <div className="quote-thumbs">
+                      {milestone.evidence.map((ev) => (
+                        <img key={ev.path} src={ev.url} alt="evidencia" className="quote-thumb" />
+                      ))}
+                    </div>
+                  )}
+                  {milestone.status === "submitted" && (
+                    <button
+                      className="btn btn-primary"
+                      onClick={() => release(plan.id, milestone.id)}
+                      data-testid={`release-${milestone.id}`}
+                    >
+                      Aprobar y liberar pago
+                    </button>
+                  )}
+                </li>
+              ))}
+            </ul>
+          </li>
+        ))}
+      </ul>
+    </section>
   );
 }
 
