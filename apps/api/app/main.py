@@ -16,6 +16,9 @@ from app.modules.matching.router import router as matching_router
 from app.modules.matching.service import matching_service
 from app.modules.messaging.router import router as messaging_router
 from app.modules.messaging.service import messaging_service
+from app.modules.milestones.router import router as milestones_router
+from app.modules.milestones.service import milestones_service
+from app.modules.provider_dashboard.router import router as provider_dashboard_router
 from app.modules.recurring.router import router as recurring_router
 from app.modules.recurring.service import recurring_service
 from app.modules.reputation.router import router as reputation_router
@@ -39,6 +42,8 @@ api_router.include_router(billing_router)
 api_router.include_router(messaging_router)
 api_router.include_router(recurring_router)
 api_router.include_router(ai_quote_router)
+api_router.include_router(milestones_router)
+api_router.include_router(provider_dashboard_router)
 api_router.include_router(reputation_router)
 api_router.include_router(admin_router)
 api_router.include_router(admin_management_router)

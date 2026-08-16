@@ -31,6 +31,12 @@ class Settings(BaseSettings):
     emergent_llm_key: str = ""
     integration_proxy_url: str = "https://integrations.emergentagent.com"
     storage_app_name: str = "xambas"
+    storage_provider: str = "emergent"  # emergent | r2
+    r2_account_id: str = ""
+    r2_access_key_id: str = ""
+    r2_secret_access_key: str = ""
+    r2_bucket: str = ""
+    r2_public_base_url: str = ""
 
     model_config = SettingsConfigDict(
         env_file=".env",

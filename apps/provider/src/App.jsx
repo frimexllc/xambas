@@ -286,6 +286,8 @@ function ProviderHome({ session, onError }) {
   const [commissionQuote, setCommissionQuote] = useState(null);
   const [connectStatus, setConnectStatus] = useState(null);
   const [payments, setPayments] = useState([]);
+  const [dashboard, setDashboard] = useState(null);
+  const [milestonePlans, setMilestonePlans] = useState([]);
   const [connecting, setConnecting] = useState(false);
   const [activeMatchId, setActiveMatchId] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -293,7 +295,7 @@ function ProviderHome({ session, onError }) {
   async function refresh() {
     setLoading(true);
     try {
-      const [matchesResponse, reputationResponse, tiersResponse, quoteResponse, connectResponse, paymentsResponse] =
+      const [matchesResponse, reputationResponse, tiersResponse, quoteResponse, connectResponse, paymentsResponse, dashboardResponse, plansResponse] =
         await Promise.all([
           api.listMatchesForProvider(session.userId),
           api.getProviderReputation(session.providerProfileId),
@@ -301,6 +303,8 @@ function ProviderHome({ session, onError }) {
           api.getCommissionQuote(session.providerProfileId, 1000),
           api.getConnectStatus(session.providerProfileId),
           api.listPaymentsForProvider(session.userId),
+          api.getDashboard(session.userId, session.providerProfileId),
+          api.listMilestonePlansForProvider(session.userId),
         ]);
       setMatches(matchesResponse.items);
       setReputation(reputationResponse);
@@ -308,6 +312,8 @@ function ProviderHome({ session, onError }) {
       setCommissionQuote(quoteResponse);
       setConnectStatus(connectResponse);
       setPayments(paymentsResponse.items);
+      setDashboard(dashboardResponse);
+      setMilestonePlans(plansResponse.items);
     } catch (err) {
       onError(err.message);
     } finally {
@@ -342,7 +348,94 @@ function ProviderHome({ session, onError }) {
   }
 
   return (
-    <div className="grid-2">
+    <div className="stack">
+      {dashboard && (
+        <section className="card" data-testid="provider-dashboard">
+          <h2>Tu panel</h2>
+          <div className="metrics-strip">
+            <div className="metric" data-testid="metric-tier">
+              <span className="metric-value">{dashboard.metrics.tier}</span>
+              <span className="metric-label">Nivel · {dashboard.metrics.commission_pct}% comisión</span>
+            </div>
+            <div className="metric">
+              <span className="metric-value">{dashboard.metrics.rating_avg.toFixed(1)}</span>
+              <span className="metric-label">Calificación</span>
+            </div>
+            <div className="metric">
+              <span className="metric-value">{dashboard.metrics.accepted_jobs}</span>
+              <span className="metric-label">Trabajos aceptados</span>
+            </div>
+            <div className="metric">
+              <span className="metric-value">{dashboard.metrics.active_opportunities}</span>
+              <span className="metric-label">Oportunidades activas</span>
+            </div>
+            <div className="metric" data-testid="metric-earnings">
+              <span className="metric-value">${dashboard.metrics.earnings_released.toLocaleString()}</span>
+              <span className="metric-label">Ingresos liberados</span>
+            </div>
+            <div className="metric">
+              <span className="metric-value">${dashboard.metrics.earnings_in_escrow.toLocaleString()}</span>
+              <span className="metric-label">En custodia</span>
+            </div>
+          </div>
+        </section>
+      )}
+
+      {dashboard && dashboard.recurring_visits.length > 0 && (
+        <section className="card" data-testid="provider-recurring">
+          <h2>Visitas recurrentes asignadas</h2>
+          <p className="muted">
+            Clientes con un servicio recurrente en tu zona. Confirma la visita aceptando el trabajo.
+          </p>
+          <ul className="data-list">
+            {dashboard.recurring_visits.map((visit) => (
+              <li key={visit.request_id} className="data-item" data-testid={`recurring-visit-${visit.request_id}`}>
+                <div className="space-between">
+                  <div>
+                    <strong>{visit.title}</strong>
+                    <p className="muted">
+                      {FREQUENCY_LABELS[visit.frequency] || visit.frequency} · próxima {visit.scheduled_date}
+                    </p>
+                  </div>
+                  {visit.match_status === "suggested" ? (
+                    <button
+                      className="btn btn-primary"
+                      onClick={() => handleAccept(visit.match_id)}
+                      data-testid={`recurring-accept-${visit.request_id}`}
+                    >
+                      Confirmar visita
+                    </button>
+                  ) : (
+                    <StatusBadge status={visit.match_status} />
+                  )}
+                </div>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
+      {milestonePlans.length > 0 && (
+        <section className="card" data-testid="provider-milestones">
+          <h2>Pagos por etapas</h2>
+          <p className="muted">
+            Sube evidencia fotográfica de cada etapa. El cliente libera el pago de esa fase al aprobarla.
+          </p>
+          <ul className="match-list">
+            {milestonePlans.map((plan) => (
+              <ProviderMilestonePlan
+                key={plan.id}
+                plan={plan}
+                providerUserId={session.userId}
+                onChanged={refresh}
+                onError={onError}
+              />
+            ))}
+          </ul>
+        </section>
+      )}
+
+      <div className="grid-2">
       <section className="card">
         <h2>Tus oportunidades</h2>
         {loading && <p className="muted">Cargando...</p>}
@@ -501,9 +594,78 @@ function ProviderHome({ session, onError }) {
           ))}
         </ul>
       </section>
+      </div>
     </div>
   );
 }
+
+const FREQUENCY_LABELS = {
+  weekly: "Semanal",
+  biweekly: "Quincenal",
+  monthly: "Mensual",
+};
+
+function ProviderMilestonePlan({ plan, providerUserId, onChanged, onError }) {
+  const [busyId, setBusyId] = useState(null);
+
+  async function handleSubmit(milestoneId, fileList) {
+    if (!fileList || fileList.length === 0) return;
+    setBusyId(milestoneId);
+    try {
+      const formData = new FormData();
+      Array.from(fileList).slice(0, 5).forEach((file) => formData.append("files", file));
+      await api.submitMilestoneEvidence(plan.id, milestoneId, providerUserId, formData);
+      onChanged();
+    } catch (err) {
+      onError(err.message);
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+  return (
+    <li className="match-item" data-testid={`provider-plan-${plan.id}`}>
+      <div className="space-between">
+        <strong>Trabajo #{plan.request_id.slice(-6)}</strong>
+        <span className="muted">
+          Liberado ${plan.released_amount} / ${plan.total_amount} {plan.currency}
+        </span>
+      </div>
+      <ul className="milestone-list">
+        {plan.milestones.map((milestone) => (
+          <li key={milestone.id} className="milestone-row">
+            <div className="space-between">
+              <span>{milestone.title} · <strong>${milestone.amount}</strong></span>
+              <span className={`badge badge-${milestone.status}`}>{MS_LABELS[milestone.status]}</span>
+            </div>
+            {milestone.evidence.length > 0 && (
+              <div className="quote-thumbs">
+                {milestone.evidence.map((ev) => (
+                  <img key={ev.path} src={ev.url} alt="evidencia" className="quote-thumb" />
+                ))}
+              </div>
+            )}
+            {milestone.status === "pending" && (
+              <label className="btn btn-secondary evidence-btn">
+                {busyId === milestone.id ? "Subiendo..." : "Subir evidencia"}
+                <input
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp"
+                  multiple
+                  hidden
+                  data-testid={`provider-evidence-${milestone.id}`}
+                  onChange={(e) => handleSubmit(milestone.id, e.target.files)}
+                />
+              </label>
+            )}
+          </li>
+        ))}
+      </ul>
+    </li>
+  );
+}
+
+const MS_LABELS = { pending: "Pendiente", submitted: "Evidencia enviada", released: "Pagada" };
 
 const PAYMENT_STATUS_LABELS = {
   pending: "Pendiente de pago",

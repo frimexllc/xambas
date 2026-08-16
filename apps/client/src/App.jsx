@@ -250,6 +250,14 @@ function ClientHome({ session, onError }) {
         >
           Cotización IA
         </button>
+        <button
+          type="button"
+          className={`tab ${view === "milestones" ? "tab-active" : ""}`}
+          onClick={() => setView("milestones")}
+          data-testid="tab-milestones"
+        >
+          Pagos por etapas
+        </button>
       </nav>
 
       {view === "requests" ? (
@@ -291,6 +299,8 @@ function ClientHome({ session, onError }) {
         </div>
       ) : view === "recurring" ? (
         <RecurringPanel session={session} categories={categories} onError={onError} />
+      ) : view === "milestones" ? (
+        <MilestonesPanel session={session} onError={onError} />
       ) : (
         <AiQuotePanel session={session} categories={categories} onError={onError} />
       )}
@@ -810,6 +820,7 @@ function RequestDetail({ session, requestId, onBack, onError }) {
   const [activeMatchId, setActiveMatchId] = useState(null);
   const [reviewMatchId, setReviewMatchId] = useState(null);
   const [paymentMatchId, setPaymentMatchId] = useState(null);
+  const [milestoneMatchId, setMilestoneMatchId] = useState(null);
 
   async function refresh() {
     setLoading(true);
@@ -890,6 +901,15 @@ function RequestDetail({ session, requestId, onBack, onError }) {
                   </button>
                 )}
                 {match.status === "accepted" && (
+                  <button
+                    className="btn btn-secondary"
+                    onClick={() => setMilestoneMatchId(match.id)}
+                    data-testid={`create-milestones-${match.id}`}
+                  >
+                    Plan por etapas
+                  </button>
+                )}
+                {match.status === "accepted" && (
                   <button className="btn btn-secondary" onClick={() => setReviewMatchId(match)}>
                     Dejar resena
                   </button>
@@ -909,6 +929,14 @@ function RequestDetail({ session, requestId, onBack, onError }) {
                   match={match}
                   session={session}
                   onClose={() => setPaymentMatchId(null)}
+                  onError={onError}
+                />
+              )}
+              {milestoneMatchId === match.id && (
+                <MilestonePlanCreator
+                  matchId={match.id}
+                  session={session}
+                  onClose={() => setMilestoneMatchId(null)}
                   onError={onError}
                 />
               )}
@@ -1551,6 +1579,169 @@ function PublishFromQuote({ quote, session, onError }) {
         {publishing ? "Publicando..." : "Publicar solicitud"}
       </button>
     </form>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Pagos por etapas (hitos): crear plan y liberar fase por fase
+// ---------------------------------------------------------------------------
+
+const MS_STATUS_LABELS = { pending: "Pendiente", submitted: "Evidencia enviada", released: "Pagada" };
+
+function MilestonePlanCreator({ matchId, session, onClose, onError }) {
+  const [rows, setRows] = useState([{ title: "", amount: "" }]);
+  const [saving, setSaving] = useState(false);
+  const [created, setCreated] = useState(false);
+
+  function updateRow(index, field, value) {
+    setRows((prev) => prev.map((r, i) => (i === index ? { ...r, [field]: value } : r)));
+  }
+
+  async function handleCreate(event) {
+    event.preventDefault();
+    const milestones = rows
+      .filter((r) => r.title.trim() && Number(r.amount) > 0)
+      .map((r) => ({ title: r.title.trim(), amount: Number(r.amount) }));
+    if (milestones.length === 0) return onError("Agrega al menos una etapa con título y monto.");
+    setSaving(true);
+    try {
+      await api.createMilestonePlan({ match_id: matchId, client_id: session.userId, currency: "MXN", milestones });
+      setCreated(true);
+    } catch (err) {
+      onError(err.message);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  if (created) {
+    return (
+      <div className="payment-panel">
+        <p className="hint" data-testid="milestone-plan-created">
+          ✅ Plan por etapas creado. Gestiónalo en la pestaña “Pagos por etapas”.
+        </p>
+        <button className="btn btn-ghost" onClick={onClose}>Cerrar</button>
+      </div>
+    );
+  }
+
+  return (
+    <form onSubmit={handleCreate} className="payment-panel stack" data-testid="milestone-creator">
+      <div className="space-between">
+        <strong>Nuevo plan por etapas</strong>
+        <button type="button" className="btn btn-ghost" onClick={onClose}>Cerrar</button>
+      </div>
+      <p className="muted">Divide el trabajo en fases; el proveedor sube evidencia y tú liberas cada pago.</p>
+      {rows.map((row, index) => (
+        <div className="row" key={index}>
+          <input
+            placeholder="Etapa (ej. Anticipo)"
+            value={row.title}
+            onChange={(e) => updateRow(index, "title", e.target.value)}
+            data-testid={`milestone-title-${index}`}
+          />
+          <input
+            type="number"
+            min="1"
+            placeholder="Monto"
+            value={row.amount}
+            onChange={(e) => updateRow(index, "amount", e.target.value)}
+            data-testid={`milestone-amount-${index}`}
+          />
+        </div>
+      ))}
+      <div className="row">
+        <button type="button" className="btn btn-ghost" onClick={() => setRows([...rows, { title: "", amount: "" }])}>
+          + Añadir etapa
+        </button>
+        <button className="btn btn-primary" type="submit" disabled={saving} data-testid="milestone-create-btn">
+          {saving ? "Creando..." : "Crear plan"}
+        </button>
+      </div>
+    </form>
+  );
+}
+
+function MilestonesPanel({ session, onError }) {
+  const [plans, setPlans] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  async function refresh() {
+    setLoading(true);
+    try {
+      const response = await api.listMilestonePlansForClient(session.userId);
+      setPlans(response.items);
+    } catch (err) {
+      onError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    refresh();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  async function release(planId, milestoneId) {
+    try {
+      await api.releaseMilestone(planId, milestoneId, session.userId);
+      refresh();
+    } catch (err) {
+      onError(err.message);
+    }
+  }
+
+  return (
+    <section className="card" data-testid="milestones-panel">
+      <h2>Pagos por etapas</h2>
+      <p className="muted">
+        Para trabajos grandes: liberas el pago fase por fase, solo cuando el proveedor sube evidencia
+        y tú la apruebas. Crea un plan desde un trabajo aceptado en “Solicitudes”.
+      </p>
+      {loading && <p className="muted">Cargando...</p>}
+      {!loading && plans.length === 0 && <p className="muted">Aún no tienes planes por etapas.</p>}
+      <ul className="request-list" data-testid="milestones-plan-list">
+        {plans.map((plan) => (
+          <li key={plan.id} className="match-item" data-testid={`plan-${plan.id}`}>
+            <div className="space-between">
+              <strong>Trabajo #{plan.request_id.slice(-6)}</strong>
+              <span className="muted">
+                Liberado ${plan.released_amount} / ${plan.total_amount} {plan.currency}
+              </span>
+            </div>
+            <ul className="milestone-list">
+              {plan.milestones.map((milestone) => (
+                <li key={milestone.id} className="milestone-row">
+                  <div className="space-between">
+                    <span>{milestone.title} · <strong>${milestone.amount}</strong></span>
+                    <span className={`badge badge-${milestone.status}`}>
+                      {MS_STATUS_LABELS[milestone.status]}
+                    </span>
+                  </div>
+                  {milestone.evidence.length > 0 && (
+                    <div className="quote-thumbs">
+                      {milestone.evidence.map((ev) => (
+                        <img key={ev.path} src={ev.url} alt="evidencia" className="quote-thumb" />
+                      ))}
+                    </div>
+                  )}
+                  {milestone.status === "submitted" && (
+                    <button
+                      className="btn btn-primary"
+                      onClick={() => release(plan.id, milestone.id)}
+                      data-testid={`release-${milestone.id}`}
+                    >
+                      Aprobar y liberar pago
+                    </button>
+                  )}
+                </li>
+              ))}
+            </ul>
+          </li>
+        ))}
+      </ul>
+    </section>
   );
 }
 

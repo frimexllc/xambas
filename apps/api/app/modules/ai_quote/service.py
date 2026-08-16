@@ -124,7 +124,12 @@ class AiQuoteService:
             encoded = base64.b64encode(content).decode("utf-8")
             data_urls.append(f"data:{upload.content_type};base64,{encoded}")
 
-        estimate = await self._run_vision(category_name=category_name, notes=notes, data_urls=data_urls)
+        estimate = await self._run_vision(
+            category_name=category_name,
+            notes=notes,
+            data_urls=data_urls,
+            history_context=await self._build_history_context(client_id, category_id),
+        )
 
         document = {
             "client_id": client_id,
@@ -144,18 +149,38 @@ class AiQuoteService:
         document = await self._repository.create_quote(document)
         return QuoteResponse(module="ai_quote", quote=self._serialize_quote(document))
 
+    async def _build_history_context(self, client_id: str, category_id: str | None) -> str:
+        """Contexto de cotizaciones previas del cliente para afinar el precio."""
+        previous = await self._repository.list_quotes(client_id=client_id)
+        if category_id:
+            previous = [q for q in previous if q.get("category_id") == category_id]
+        previous = previous[:3]
+        if not previous:
+            return ""
+        lines = [
+            f"- {q.get('suggested_title', 'trabajo')}: ${q.get('price_min')}-${q.get('price_max')} {q.get('currency', 'MXN')}"
+            for q in previous
+        ]
+        return (
+            "Historial de cotizaciones previas de este cliente (úsalo como referencia de rango, "
+            "no lo copies literalmente):\n" + "\n".join(lines)
+        )
+
     async def _run_vision(
         self,
         *,
         category_name: str | None,
         notes: str | None,
         data_urls: list[str],
+        history_context: str = "",
     ) -> GroqEstimate:
         context_lines = []
         if category_name:
             context_lines.append(f"Categoría de servicio: {category_name}.")
         if notes:
             context_lines.append(f"Notas del cliente: {notes}")
+        if history_context:
+            context_lines.append(history_context)
         context = " ".join(context_lines) or "Sin contexto adicional."
 
         user_content: list[dict] = [

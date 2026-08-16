@@ -110,6 +110,16 @@ export const api = {
   },
   listEstimates: (clientId) => request(`/ai-quote/estimates?client_id=${clientId}`),
   getEstimate: (quoteId) => request(`/ai-quote/estimates/${quoteId}`),
+
+  // pagos por etapas (hitos)
+  listMilestonePlansForClient: (clientId) =>
+    request(`/milestones/plans?client_id=${clientId}`),
+  createMilestonePlan: (payload) =>
+    request("/milestones/plans", { method: "POST", body: JSON.stringify(payload) }),
+  releaseMilestone: (planId, milestoneId, clientId) =>
+    request(`/milestones/plans/${planId}/milestones/${milestoneId}/release?client_id=${clientId}`, {
+      method: "POST",
+    }),
 };
 
 export { BASE_URL };

@@ -561,3 +561,9 @@ textarea:focus {
   background: var(--danger-bg);
   color: var(--danger);
 }
+
+.milestone-list { list-style: none; margin: 8px 0 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+.milestone-row { display: flex; flex-direction: column; gap: 8px; padding: 10px 12px; border: 1px dashed var(--border); border-radius: 8px; }
+.badge-pending { background: var(--warning-bg); color: var(--warning); }
+.badge-submitted { background: #e0eefe; color: #1552b8; }
+.badge-released { background: var(--success-bg); color: var(--success); }

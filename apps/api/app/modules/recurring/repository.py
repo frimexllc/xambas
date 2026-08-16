@@ -50,3 +50,19 @@ class RecurringRepository:
         return await self._db.subscription_occurrences.count_documents(
             {"subscription_id": subscription_id}
         )
+
+    async def list_occurrences_for_requests(self, request_ids: list[str]) -> list[dict[str, Any]]:
+        if not request_ids:
+            return []
+        cursor = self._db.subscription_occurrences.find(
+            {"request_id": {"$in": request_ids}}
+        ).sort("_id", -1)
+        return await cursor.to_list(length=200)
+
+    async def get_subscriptions_by_ids(self, ids: list[str]) -> dict[str, dict[str, Any]]:
+        if not ids:
+            return {}
+        object_ids = [ObjectId(i) for i in ids]
+        cursor = self._db.subscriptions.find({"_id": {"$in": object_ids}})
+        docs = await cursor.to_list(length=200)
+        return {str(doc["_id"]): doc for doc in docs}
