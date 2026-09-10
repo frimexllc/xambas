@@ -6,9 +6,11 @@ class Settings(BaseSettings):
     app_env: str = "development"
     app_host: str = "0.0.0.0"
     app_port: int = 8000
-    mongo_uri: str = "mongodb://root:root@localhost:27017/?authSource=admin"
+    mongo_uri: str = "mongodb://root:root@localhost:27018/?authSource=admin"
     mongo_db_name: str = "xambas_dev"
-    cors_origins: str = "http://localhost:5173,http://localhost:5174"
+    cors_origins: str = "http://localhost:5173,http://localhost:5174,http://localhost:5175,http://localhost:5176,http://localhost:4173,http://localhost:4174,http://localhost:4175,http://localhost:4176"
+    client_app_url: str = "http://localhost:4173"
+    provider_app_url: str = "http://localhost:4174"
     payments_provider: str = "auto"
     default_country_code: str = "MX"
     stripe_secret_key: str = ""
@@ -31,7 +33,8 @@ class Settings(BaseSettings):
     emergent_llm_key: str = ""
     integration_proxy_url: str = "https://integrations.emergentagent.com"
     storage_app_name: str = "xambas"
-    storage_provider: str = "emergent"  # emergent | r2
+    storage_provider: str = "emergent"  # emergent | r2 | local
+    storage_local_dir: str = ""  # solo para storage_provider=local; por defecto <cwd>/.storage
     r2_account_id: str = ""
     r2_access_key_id: str = ""
     r2_secret_access_key: str = ""

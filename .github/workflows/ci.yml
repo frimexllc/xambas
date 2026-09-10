@@ -1,0 +1,99 @@
+name: CI
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend:
+    name: API (FastAPI) — pytest de integración
+    runs-on: ubuntu-latest
+    services:
+      mongo:
+        image: mongo:7
+        ports:
+          - 27017:27017
+        options: >-
+          --health-cmd "mongosh --quiet --eval 'db.runCommand({ ping: 1 })'"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      MONGO_URI: mongodb://localhost:27017
+      MONGO_DB_NAME: xambas_ci
+      OTP_PROVIDER: dev
+      EXPOSE_OTP_IN_DEV: "true"
+      APP_ENV: test
+      # Almacenamiento en disco: sin red ni credenciales de Emergent.
+      STORAGE_PROVIDER: local
+      # La visión con Groq queda desactivada en CI (sin llave, sin red externa).
+      # Para habilitar las pruebas `external`: definir GROQ_API_KEY como secret
+      # del repo y XAMBAS_RUN_EXTERNAL_TESTS=1 aquí.
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Instalar uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          python-version: "3.12"
+
+      - name: Instalar dependencias (incluye grupo dev)
+        working-directory: apps/api
+        run: uv sync
+
+      - name: Arrancar la API en segundo plano
+        working-directory: apps/api
+        run: |
+          nohup uv run uvicorn app.main:app --host 127.0.0.1 --port 8000 > "$RUNNER_TEMP/api.log" 2>&1 &
+          echo $! > "$RUNNER_TEMP/api.pid"
+          for i in $(seq 1 40); do
+            if curl -sf http://127.0.0.1:8000/health > /dev/null; then
+              echo "API arriba tras ${i}s"; exit 0
+            fi
+            sleep 1
+          done
+          echo "::error::La API no respondió a /health"; cat "$RUNNER_TEMP/api.log"; exit 1
+
+      - name: Correr pytest
+        working-directory: apps/api
+        env:
+          XAMBAS_API_URL: http://127.0.0.1:8000
+        run: uv run pytest
+
+      - name: Log de la API (si algo falló)
+        if: failure()
+        run: cat "$RUNNER_TEMP/api.log" || true
+
+      - name: Detener la API
+        if: always()
+        run: kill "$(cat "$RUNNER_TEMP/api.pid")" 2>/dev/null || true
+
+  frontend:
+    name: Frontends (Vite) — build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Habilitar Corepack (Yarn 4)
+        run: corepack enable
+
+      - name: Instalar dependencias
+        # Sin --immutable: el .pnp.cjs versionado tiende a desincronizarse y no
+        # queremos que eso tumbe el CI. Cuando se estabilice, subir a --immutable.
+        run: yarn install
+
+      - name: Build de las 4 apps
+        run: |
+          yarn build:client
+          yarn build:provider
+          yarn build:admin
+          yarn build:web

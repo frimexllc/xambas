@@ -414,6 +414,44 @@ bloques, es un proyecto aparte.
   mismo puerto que usan `apps/api/.env` y `VITE_API_BASE_URL` en los
   frontends. Si cambias el puerto de la API, actualiza los tres lugares.
 
+## Pruebas y CI
+
+### Suite de integración de la API (`apps/api/tests/`)
+
+Son pruebas de integración: corren contra una instancia **en ejecución** de la
+API (no la montan en proceso). Cubren `recurring`, `milestones`,
+`provider_dashboard` y `ai_quote`, más regresiones de `matching`.
+
+```bash
+# 1. Mongo arriba (docker compose -f infra/docker-compose.dev.yml up -d)
+# 2. API arriba, apuntando a una BD de pruebas y con almacenamiento local:
+cd apps/api
+MONGO_DB_NAME=xambas_test STORAGE_PROVIDER=local \
+  uv run uvicorn app.main:app --port 8000
+# 3. En otra terminal:
+cd apps/api
+uv sync            # instala el grupo dev (pytest, pillow)
+uv run pytest      # usa http://localhost:8000 por defecto
+```
+
+- La URL base se toma de `XAMBAS_API_URL` (o `REACT_APP_BACKEND_URL`), si no
+  `http://localhost:8000`.
+- Los IDs de categoría se resuelven en tiempo de ejecución contra el catálogo
+  sembrado; no hay IDs hardcodeados.
+- Las pruebas marcadas `external` llaman a Groq de verdad y se saltan salvo
+  `XAMBAS_RUN_EXTERNAL_TESTS=1` (requiere `GROQ_API_KEY`).
+- `STORAGE_PROVIDER=local` guarda los archivos subidos en `apps/api/.storage/`
+  (sin red ni credenciales de Emergent); útil para desarrollo local y CI.
+
+### GitHub Actions (`.github/workflows/ci.yml`)
+
+En cada push a `main`/`develop` y en cada PR:
+
+- **backend**: levanta Mongo, arranca la API (`STORAGE_PROVIDER=local`) y corre
+  `pytest`.
+- **frontend**: `yarn install` y build de las 4 apps (`client`, `provider`,
+  `admin`, `web`).
+
 ## Siguientes pasos sugeridos
 
 1. Conectar `business_settings` de verdad a `billing`/`matching` (hoy se guarda pero `matching`/`billing` aun usan sus propias constantes).

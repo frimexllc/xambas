@@ -12,11 +12,23 @@ Marketplace que conecta clientes con proveedores de servicios del hogar. Diferen
 - Persistencia: MongoDB (motor). Envelopes de respuesta con campo `module`; IDs de Mongo serializados como string.
 
 ## Adaptación al entorno de preview (Emergent)
-El supervisor (config read-only) corre `uvicorn server:app` en `/app/backend:8001` y `yarn start` en `/app/frontend:3000`. Se crearon **shims** que puentean al monorepo sin moverlo:
+El supervisor (config read-only) corre `uvicorn server:app` en `/app/backend:8000` y `yarn start` en `/app/frontend:3000`. Se crearon **shims** que puentean al monorepo sin moverlo:
 - `/app/backend/server.py` → añade `/app/apps/api` al path e importa `app.main:app`. Config vía `/app/backend/.env` (MONGO_URI=mongodb://localhost:27017, DB=xambas_dev, OTP_PROVIDER=dev).
 - `/app/frontend/start.sh` → corre Vite de `apps/${PREVIEW_APP:-client}` en `0.0.0.0:3000`. Para mostrar otra app (web/provider/admin): cambiar `PREVIEW_APP` o el default.
 - `apps/client/.env` → `VITE_API_BASE_URL=/api` (mismo origen vía ingress).
 - IMPORTANTE: uvicorn `--reload` solo observa `/app/backend`. Tras editar `/app/apps/api` hay que `sudo supervisorctl restart backend`.
+
+## Implementado en esta sesión (Sep 2026) — CI e infraestructura de pruebas
+- ✅ **GitHub Actions** (`.github/workflows/ci.yml`): job `backend` (Mongo + API + `pytest`) y job `frontend` (`yarn install` + build de las 4 apps) en cada push a `main`/`develop` y en cada PR.
+- ✅ **Suite de integración migrada** de `backend/tests/` (entorno Emergent) a `apps/api/tests/`:
+  - `conftest.py` + `helpers.py` compartidos. La URL base se resuelve por env (`XAMBAS_API_URL` → `REACT_APP_BACKEND_URL` → `localhost:8000`).
+  - IDs de categoría **resueltos en runtime** contra el catálogo sembrado (antes hardcodeados; se rompían con una BD limpia).
+  - Imágenes de prueba generadas en memoria con Pillow (antes rutas fijas `/app/*.jpg`, `/tmp/*.jpg`).
+  - Marcador `external` para las pruebas que llaman a Groq de verdad; se saltan salvo `XAMBAS_RUN_EXTERNAL_TESTS=1`.
+  - `pytest` + `pillow` en `[dependency-groups] dev` de `apps/api/pyproject.toml`. Estado: 33 passed, 4 skipped (external) en local.
+- ✅ **Backend de almacenamiento `local`** en `core/storage.py` (`STORAGE_PROVIDER=local`, opcional `STORAGE_LOCAL_DIR`): sistema de archivos, sin red ni credenciales de Emergent. Lo usa el CI y sirve para desarrollo local sin llaves.
+- ✅ **Credenciales**: `memory/test_credentials.md` revisado — no contiene secretos reales (solo describe el flujo OTP dev). Se deja en el repo.
+- ⚠️ **`.pnp.cjs`**: sigue desincronizándose (aparece como modificado casi siempre). Por eso el CI usa `yarn install` sin `--immutable`. Pendiente: regenerarlo limpio y commitearlo solo, o evaluar `nodeLinker: node-modules`.
 
 ## Implementado en esta sesión (Jun 2026)
 - ✅ Stack completo corriendo en el preview (API + Mongo + app cliente), 19 categorías sembradas.

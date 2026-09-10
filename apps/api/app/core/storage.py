@@ -3,10 +3,16 @@
 - `emergent` (por defecto, sin llaves adicionales, usa EMERGENT_LLM_KEY).
 - `r2` (Cloudflare R2, S3-compatible vía boto3): listo para producción, solo
   hay que rellenar las variables R2_* en el .env y poner STORAGE_PROVIDER=r2.
+- `local` (sistema de archivos): sin dependencias ni red. Pensado para CI y
+  para desarrollo local sin credenciales de Emergent. STORAGE_PROVIDER=local
+  y, opcionalmente, STORAGE_LOCAL_DIR (por defecto `<cwd>/.storage`).
 
-La interfaz pública (`init`/`put_object`/`get_object`) es idéntica para ambos,
+La interfaz pública (`init`/`put_object`/`get_object`) es idéntica para todos,
 así que el resto del código no cambia al alternar el proveedor.
 """
+
+import mimetypes
+from pathlib import Path
 
 import requests
 
@@ -97,9 +103,52 @@ class _R2Storage:
         return obj["Body"].read(), obj.get("ContentType", "application/octet-stream")
 
 
+class _LocalStorage:
+    """Backend de sistema de archivos: sin red ni credenciales.
+
+    El `content_type` se guarda en un sidecar `<path>.type` para devolverlo tal
+    cual en la lectura; si falta, se infiere por la extensión.
+    """
+
+    def __init__(self) -> None:
+        base = (settings.storage_local_dir or "").strip() or str(Path.cwd() / ".storage")
+        self._root = Path(base).resolve()
+
+    def _resolve(self, path: str) -> Path:
+        target = (self._root / path).resolve()
+        if self._root not in target.parents and target != self._root:
+            raise RuntimeError("path fuera del directorio de almacenamiento")
+        return target
+
+    def init(self, force: bool = False) -> str:
+        self._root.mkdir(parents=True, exist_ok=True)
+        return str(self._root)
+
+    def put_object(self, path: str, data: bytes, content_type: str) -> dict:
+        self.init()
+        target = self._resolve(path)
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_bytes(data)
+        target.with_suffix(target.suffix + ".type").write_text(content_type, encoding="utf-8")
+        return {"path": path, "size": len(data)}
+
+    def get_object(self, path: str) -> tuple[bytes, str]:
+        target = self._resolve(path)
+        if not target.is_file():
+            raise FileNotFoundError(path)
+        type_sidecar = target.with_suffix(target.suffix + ".type")
+        if type_sidecar.is_file():
+            content_type = type_sidecar.read_text(encoding="utf-8").strip()
+        else:
+            content_type = mimetypes.guess_type(str(target))[0] or "application/octet-stream"
+        return target.read_bytes(), content_type
+
+
 def _build_storage():
     if settings.storage_provider == "r2":
         return _R2Storage()
+    if settings.storage_provider == "local":
+        return _LocalStorage()
     return _EmergentStorage()
 
 

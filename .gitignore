@@ -11,6 +11,10 @@ __pycache__/
 node_modules/
 dist/
 coverage/
+.pytest_cache/
+
+# Almacenamiento local de objetos (STORAGE_PROVIDER=local)
+.storage/
 
 .env
 .env.*

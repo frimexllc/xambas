@@ -1,84 +1,46 @@
-"""Backend tests for Xambas milestones + provider_dashboard modules."""
-import io
-import os
+"""Pruebas de integración de los módulos milestones + provider_dashboard (Xambas)."""
 import uuid
 
 import pytest
 import requests
 
-BASE_URL = os.environ.get("REACT_APP_BACKEND_URL", "https://6a5a4228-856c-435a-9735-832a8c1fd2f3.preview.emergentagent.com").rstrip("/")
-CATEGORY_ID_LIMPIEZA_BASICA = "6a7d4c75b514b1dcdaeafdd8"
-SAMPLE_IMG = "/app/sample_kitchen.jpg"
+from tests.helpers import BASE_URL, bootstrap_client, bootstrap_provider
+
+# Las subidas multipart usan ``requests`` directo: la sesión ``api`` fija
+# ``Content-Type: application/json``, que rompería el cuerpo multipart.
 
 
 @pytest.fixture(scope="module")
-def api():
-    s = requests.Session()
-    s.headers.update({"Content-Type": "application/json"})
-    return s
-
-
-@pytest.fixture(scope="module")
-def zone():
+def zone() -> str:
     return f"ZONA_MS_{uuid.uuid4().hex[:6]}"
 
 
 @pytest.fixture(scope="module")
-def client_user(api):
-    suffix = uuid.uuid4().hex[:8]
-    r = api.post(f"{BASE_URL}/api/identity/bootstrap", json={
-        "email": f"TEST_ms_cli_{suffix}@example.com",
-        "phone": f"+52155600{suffix[:5]}",
-        "role": "client",
-        "locale": "es-MX",
-    })
-    assert r.status_code == 200, r.text
-    return r.json()["user"]
+def client_user() -> dict:
+    return bootstrap_client(BASE_URL)
 
 
 @pytest.fixture(scope="module")
-def provider_user(api, zone):
-    suffix = uuid.uuid4().hex[:8]
-    r = api.post(f"{BASE_URL}/api/identity/bootstrap", json={
-        "email": f"TEST_ms_prov_{suffix}@example.com",
-        "phone": f"+52155601{suffix[:5]}",
-        "role": "provider",
-        "locale": "es-MX",
-        "provider_profile": {
-            "business_name": "TEST MS Provider",
-            "categories": [CATEGORY_ID_LIMPIEZA_BASICA],
-            "coverage_zones": [zone],
-        },
-    })
-    assert r.status_code == 200, r.text
-    return r.json()["user"]
+def provider_user(limpieza_basica_category_id: str, zone: str) -> dict:
+    return bootstrap_provider(
+        BASE_URL, limpieza_basica_category_id, [zone], business_name="TEST MS Provider"
+    )
 
 
 @pytest.fixture(scope="module")
-def other_provider_user(api, zone):
-    """A separate provider used to test 403 guards."""
-    suffix = uuid.uuid4().hex[:8]
-    r = api.post(f"{BASE_URL}/api/identity/bootstrap", json={
-        "email": f"TEST_ms_prov2_{suffix}@example.com",
-        "phone": f"+52155602{suffix[:5]}",
-        "role": "provider",
-        "locale": "es-MX",
-        "provider_profile": {
-            "business_name": "TEST MS Provider Alt",
-            "categories": [CATEGORY_ID_LIMPIEZA_BASICA],
-            "coverage_zones": [zone + "_ALT"],
-        },
-    })
-    assert r.status_code == 200, r.text
-    return r.json()["user"]
+def other_provider_user(limpieza_basica_category_id: str, zone: str) -> dict:
+    """Proveedor distinto, para probar los guardas 403."""
+    return bootstrap_provider(
+        BASE_URL, limpieza_basica_category_id, [zone + "_ALT"], business_name="TEST MS Provider Alt"
+    )
 
 
 @pytest.fixture(scope="module")
-def accepted_match(api, client_user, provider_user, zone):
-    """Create service request, run matching, find and accept the match for provider_user."""
+def accepted_match(api, client_user, provider_user, zone, limpieza_basica_category_id):
+    """Crea service request, corre matching, encuentra y acepta el match del provider_user."""
     payload = {
         "client_id": client_user["id"],
-        "category_id": CATEGORY_ID_LIMPIEZA_BASICA,
+        "category_id": limpieza_basica_category_id,
         "title": "TEST milestones request",
         "description": "Solicitud de prueba para milestones - limpieza basica.",
         "country_code": "MX",
@@ -88,16 +50,13 @@ def accepted_match(api, client_user, provider_user, zone):
     }
     r = api.post(f"{BASE_URL}/api/matching/service-requests", json=payload)
     assert r.status_code == 200, r.text
-    body = r.json()
-    request_id = body["request"]["id"]
+    request_id = r.json()["request"]["id"]
 
-    # get matches for this request
     m = api.get(f"{BASE_URL}/api/matching/service-requests/{request_id}/matches")
     assert m.status_code == 200, m.text
     matches = m.json()["items"]
-    # pick match belonging to our provider
     mine = [x for x in matches if x["provider_user_id"] == provider_user["id"]]
-    assert mine, f"No match found for provider {provider_user['id']} in zone {zone}. Got: {matches}"
+    assert mine, f"Sin match para el proveedor {provider_user['id']} en zona {zone}. Recibido: {matches}"
     match_id = mine[0]["id"]
 
     ac = api.post(
@@ -169,10 +128,9 @@ def test_release_before_submit_returns_409(api, accepted_match, plan):
     assert r.status_code == 409, r.text
 
 
-def test_submit_with_foreign_provider_returns_403(api, accepted_match, plan, other_provider_user):
+def test_submit_with_foreign_provider_returns_403(api, accepted_match, plan, other_provider_user, sample_image_bytes):
     mid = plan["milestones"][0]["id"]
-    with open(SAMPLE_IMG, "rb") as fh:
-        files = [("files", ("photo.jpg", fh.read(), "image/jpeg"))]
+    files = [("files", ("photo.jpg", sample_image_bytes, "image/jpeg"))]
     r = requests.post(
         f"{BASE_URL}/api/milestones/plans/{plan['id']}/milestones/{mid}/submit",
         params={"provider_user_id": other_provider_user["id"]},
@@ -182,10 +140,9 @@ def test_submit_with_foreign_provider_returns_403(api, accepted_match, plan, oth
 
 
 # ------------- SUBMIT EVIDENCE -------------
-def test_submit_evidence_ok(api, accepted_match, plan):
+def test_submit_evidence_ok(api, accepted_match, plan, sample_image_bytes):
     mid = plan["milestones"][0]["id"]
-    with open(SAMPLE_IMG, "rb") as fh:
-        files = [("files", ("photo.jpg", fh.read(), "image/jpeg"))]
+    files = [("files", ("photo.jpg", sample_image_bytes, "image/jpeg"))]
     r = requests.post(
         f"{BASE_URL}/api/milestones/plans/{plan['id']}/milestones/{mid}/submit",
         params={"provider_user_id": accepted_match["provider_user_id"]},
@@ -204,16 +161,15 @@ def test_submit_evidence_ok(api, accepted_match, plan):
 # ------------- FILE SERVING -------------
 def test_get_file_ok(api, plan):
     path = plan.get("_evidence_path")
-    assert path, "evidence path missing; previous test failed"
-    r = requests.get(f"{BASE_URL}/api/milestones/files/{path}")
+    assert path, "falta el path de evidencia; la prueba anterior falló"
+    r = api.get(f"{BASE_URL}/api/milestones/files/{path}")
     assert r.status_code == 200
     assert r.headers.get("content-type", "").startswith("image/")
     assert len(r.content) > 0
 
 
 def test_get_file_outside_prefix_404(api):
-    # No leading "xambas/milestones/" prefix -> 404
-    r = requests.get(f"{BASE_URL}/api/milestones/files/xambas/ai-quote/whatever.jpg")
+    r = api.get(f"{BASE_URL}/api/milestones/files/xambas/ai-quote/whatever.jpg")
     assert r.status_code == 404
 
 
@@ -237,16 +193,15 @@ def test_release_first_milestone(api, accepted_match, plan):
     body = r.json()["plan"]
     m0 = next(m for m in body["milestones"] if m["id"] == mid)
     assert m0["status"] == "released"
-    assert m0["transfer_mode"] == "manual"  # Stripe not configured
+    assert m0["transfer_mode"] == "manual"  # Stripe no configurado
     assert m0["released_at"] is not None
     assert body["released_amount"] == 300.0
-    assert body["status"] == "active"  # 1 pending remaining
+    assert body["status"] == "active"
 
 
-def test_submit_and_release_second_milestone_completes_plan(api, accepted_match, plan):
+def test_submit_and_release_second_milestone_completes_plan(api, accepted_match, plan, sample_image_bytes):
     mid = plan["milestones"][1]["id"]
-    with open(SAMPLE_IMG, "rb") as fh:
-        files = [("files", ("photo2.jpg", fh.read(), "image/jpeg"))]
+    files = [("files", ("photo2.jpg", sample_image_bytes, "image/jpeg"))]
     r = requests.post(
         f"{BASE_URL}/api/milestones/plans/{plan['id']}/milestones/{mid}/submit",
         params={"provider_user_id": accepted_match["provider_user_id"]},
@@ -276,8 +231,7 @@ def test_list_plans_by_client(api, accepted_match):
 def test_list_plans_by_provider(api, accepted_match):
     r = api.get(f"{BASE_URL}/api/milestones/plans", params={"provider_user_id": accepted_match["provider_user_id"]})
     assert r.status_code == 200
-    d = r.json()
-    assert d["total"] >= 1
+    assert r.json()["total"] >= 1
 
 
 # ------------- PROVIDER DASHBOARD -------------
@@ -294,7 +248,6 @@ def test_provider_dashboard(api, accepted_match):
     assert d["module"] == "provider_dashboard"
     m = d["metrics"]
     assert "tier" in m
-    assert "commission_pct" in m
     assert isinstance(m["commission_pct"], (int, float))
     assert m["accepted_jobs"] >= 1
     assert "earnings_released" in m
