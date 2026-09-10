@@ -130,8 +130,18 @@ class PaymentsService:
     # Sincronizacion / consulta
     # ------------------------------------------------------------------
 
-    async def get_payment(self, payment_id: str, *, sync: bool = True) -> PaymentSummary:
+    async def get_payment(
+        self, payment_id: str, *, sync: bool = True, acting_user_id: str | None = None
+    ) -> PaymentSummary:
         document = await self._get_payment_or_404(payment_id)
+        if acting_user_id is not None and acting_user_id not in (
+            document["client_id"],
+            document["provider_user_id"],
+        ):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="este pago no te pertenece",
+            )
         if sync and document["status"] == "pending" and document.get("stripe_payment_intent_id"):
             document = await self._sync_from_stripe(document)
         return self._serialize_payment(document)
@@ -298,9 +308,14 @@ class PaymentsService:
     # ------------------------------------------------------------------
 
     async def create_connect_onboarding(
-        self, provider_profile_id: str, *, refresh_url: str, return_url: str
+        self, provider_profile_id: str, *, refresh_url: str, return_url: str, acting_user_id: str | None = None
     ) -> ConnectOnboardingResponse:
         provider_document = await self._get_provider_profile_or_404(provider_profile_id)
+        if acting_user_id is not None and provider_document["user_id"] != acting_user_id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="este perfil de proveedor no te pertenece",
+            )
         account_id = provider_document.get("stripe_connect_account_id")
 
         if not account_id:
@@ -338,8 +353,15 @@ class PaymentsService:
             onboarding_url=link.url,
         )
 
-    async def get_connect_status(self, provider_profile_id: str) -> ConnectStatusResponse:
+    async def get_connect_status(
+        self, provider_profile_id: str, *, acting_user_id: str | None = None
+    ) -> ConnectStatusResponse:
         provider_document = await self._get_provider_profile_or_404(provider_profile_id)
+        if acting_user_id is not None and provider_document["user_id"] != acting_user_id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="este perfil de proveedor no te pertenece",
+            )
         account_id = provider_document.get("stripe_connect_account_id")
         if not account_id:
             return ConnectStatusResponse(

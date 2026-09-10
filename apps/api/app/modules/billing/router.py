@@ -3,6 +3,8 @@ from fastapi import APIRouter, Depends, Header, Query, Request
 from app.core.config import settings
 from app.modules.admin.router import require_admin
 from app.modules.admin.schemas import AdminSummary
+from app.modules.identity.dependencies import get_current_user, require_client, require_provider
+from app.modules.identity.schemas import UserSummary
 from app.modules.billing.payments_service import payments_service
 from app.modules.billing.schemas import (
     BillingStatusResponse,
@@ -54,28 +56,42 @@ async def billing_commission_quote(
 
 
 @router.post("/payments")
-async def create_payment(payload: PaymentCreateRequest) -> PaymentCreateResponse:
+async def create_payment(
+    payload: PaymentCreateRequest,
+    current_user: UserSummary = Depends(require_client),
+) -> PaymentCreateResponse:
+    payload = payload.model_copy(update={"client_id": current_user.id})
     return await payments_service.create_payment(payload)
 
 
 @router.get("/payments/{payment_id}")
-async def get_payment(payment_id: str) -> PaymentSummary:
-    return await payments_service.get_payment(payment_id)
+async def get_payment(
+    payment_id: str,
+    current_user: UserSummary = Depends(get_current_user),
+) -> PaymentSummary:
+    return await payments_service.get_payment(payment_id, acting_user_id=current_user.id)
 
 
 @router.get("/payments")
 async def list_payments(
-    client_id: str | None = Query(default=None),
-    provider_user_id: str | None = Query(default=None),
+    current_user: UserSummary = Depends(get_current_user),
 ) -> PaymentListResponse:
+    # "Mis pagos": como cliente o como proveedor, según el rol de la cuenta.
+    if current_user.role == "provider":
+        return await payments_service.list_payments(
+            client_id=None, provider_user_id=current_user.id, admin=False
+        )
     return await payments_service.list_payments(
-        client_id=client_id, provider_user_id=provider_user_id, admin=False
+        client_id=current_user.id, provider_user_id=None, admin=False
     )
 
 
 @router.post("/payments/{payment_id}/confirm-completion")
-async def confirm_completion(payment_id: str, client_id: str = Query(...)) -> PaymentSummary:
-    return await payments_service.confirm_completion_and_release(payment_id, client_id)
+async def confirm_completion(
+    payment_id: str,
+    current_user: UserSummary = Depends(require_client),
+) -> PaymentSummary:
+    return await payments_service.confirm_completion_and_release(payment_id, current_user.id)
 
 
 @router.post("/payments/{payment_id}/refund")
@@ -96,18 +112,27 @@ async def admin_list_payments(_: AdminSummary = Depends(require_admin)) -> Payme
 
 
 @router.post("/connect/onboarding-link")
-async def create_connect_onboarding(payload: ConnectOnboardingRequest) -> ConnectOnboardingResponse:
+async def create_connect_onboarding(
+    payload: ConnectOnboardingRequest,
+    current_user: UserSummary = Depends(require_provider),
+) -> ConnectOnboardingResponse:
     base = settings.provider_app_url.rstrip("/")
     return await payments_service.create_connect_onboarding(
         payload.provider_profile_id,
         refresh_url=f"{base}/connect/refresh",
         return_url=f"{base}/connect/return",
+        acting_user_id=current_user.id,
     )
 
 
 @router.get("/connect/status")
-async def get_connect_status(provider_profile_id: str = Query(...)) -> ConnectStatusResponse:
-    return await payments_service.get_connect_status(provider_profile_id)
+async def get_connect_status(
+    provider_profile_id: str = Query(...),
+    current_user: UserSummary = Depends(require_provider),
+) -> ConnectStatusResponse:
+    return await payments_service.get_connect_status(
+        provider_profile_id, acting_user_id=current_user.id
+    )
 
 
 # ---------------------------------------------------------------------------

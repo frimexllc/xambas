@@ -14,7 +14,8 @@ class MilestoneInput(BaseModel):
 
 class PlanCreateRequest(BaseModel):
     match_id: str
-    client_id: str
+    # El cliente sale del token de sesión; opcional/ignorado en el body.
+    client_id: str | None = None
     currency: str = "MXN"
     milestones: list[MilestoneInput] = Field(min_length=1, max_length=12)
 

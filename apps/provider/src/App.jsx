@@ -1,19 +1,26 @@
 import { useEffect, useState } from "react";
-import { api } from "./lib/api.js";
+import { api, setAuthToken } from "./lib/api.js";
 import { clearSession, loadSession, saveSession } from "./lib/session.js";
 import "./App.css";
 
+// Rehidrata el token Bearer antes del primer render para que las llamadas
+// autenticadas (billing, milestones) funcionen tras recargar la página.
+const initialSession = loadSession();
+setAuthToken(initialSession?.token ?? null);
+
 export default function App() {
-  const [session, setSession] = useState(() => loadSession());
+  const [session, setSession] = useState(initialSession);
   const [error, setError] = useState(null);
 
   function handleAuthenticated(newSession) {
     saveSession(newSession);
+    setAuthToken(newSession?.token ?? null);
     setSession(newSession);
   }
 
   function handleLogout() {
     clearSession();
+    setAuthToken(null);
     setSession(null);
   }
 

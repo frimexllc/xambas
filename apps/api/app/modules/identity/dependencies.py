@@ -27,3 +27,12 @@ async def require_client(user: UserSummary = Depends(get_current_user)) -> UserS
             detail="esta accion es solo para cuentas de cliente",
         )
     return user
+
+
+async def require_provider(user: UserSummary = Depends(get_current_user)) -> UserSummary:
+    if user.role not in {"provider", "both"}:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="esta accion es solo para cuentas de proveedor",
+        )
+    return user
