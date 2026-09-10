@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import os
 import uuid
+from types import SimpleNamespace
 
 import requests
 
@@ -75,8 +76,11 @@ def bootstrap_provider(
     return r.json()["user"]
 
 
-def verify_otp_for(base_url: str, user_id: str) -> None:
-    """Completa el flujo OTP en modo dev (el código llega como ``debug_code``)."""
+def verify_otp_for(base_url: str, user_id: str) -> str:
+    """Completa el flujo OTP en modo dev y devuelve el token de sesión.
+
+    El código llega como ``debug_code`` en la respuesta de `otp/request`.
+    """
     r = requests.post(
         f"{base_url}/api/identity/otp/request",
         json={"user_id": user_id, "purpose": "registration", "channel": "sms"},
@@ -98,3 +102,27 @@ def verify_otp_for(base_url: str, user_id: str) -> None:
         timeout=REQUEST_TIMEOUT,
     )
     assert r.status_code == 200, r.text
+    return r.json()["session"]["token"]
+
+
+def _authed_session(token: str) -> requests.Session:
+    session = requests.Session()
+    session.headers.update(
+        {"Content-Type": "application/json", "Authorization": f"Bearer {token}"}
+    )
+    return session
+
+
+def authed_client(base_url: str) -> SimpleNamespace:
+    """Cliente registrado + verificado, con una `requests.Session` que ya lleva
+    el header ``Authorization: Bearer <token>``.
+    """
+    user = bootstrap_client(base_url)
+    token = verify_otp_for(base_url, user["id"])
+    return SimpleNamespace(user=user, token=token, session=_authed_session(token))
+
+
+def authed_provider(base_url: str, category_id: str, coverage_zones: list[str]) -> SimpleNamespace:
+    user = bootstrap_provider(base_url, category_id, coverage_zones)
+    token = verify_otp_for(base_url, user["id"])
+    return SimpleNamespace(user=user, token=token, session=_authed_session(token))

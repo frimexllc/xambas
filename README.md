@@ -276,6 +276,25 @@ La documentacion interactiva (Swagger) queda disponible en `http://localhost:800
 - El backend mantiene politica local de intentos con `OTP_MAX_ATTEMPTS`.
 - Las sesiones se crean solo despues de una verificacion OTP exitosa.
 
+### Autenticacion de endpoints de usuario (Bearer)
+
+`POST /api/identity/otp/verify` devuelve `session.token`. Los modulos
+`recurring` y `ai_quote` exigen ese token en cada request:
+
+```
+Authorization: Bearer <token>
+```
+
+- El `client_id` se toma del token, no del body/query (evita operar a nombre
+  de otro usuario). Los endpoints por id devuelven `403` si el recurso es de
+  otro cliente.
+- Quedan publicos a proposito: los `/status` y `GET /api/ai-quote/files/{path}`
+  (URL-capacidad con UUID irrepetible, igual que `/api/milestones/files/*`,
+  porque las etiquetas `<img>` del navegador no envian el header).
+- La dependencia reutilizable es `get_current_user` en
+  `app/modules/identity/dependencies.py`; `require_admin` (modulo `admin`) es su
+  equivalente para el panel.
+
 ## Categorias de Lanzamiento
 
 El catalogo inicial se siembra automaticamente al arrancar la API.

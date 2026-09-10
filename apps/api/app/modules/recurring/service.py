@@ -84,15 +84,19 @@ class RecurringService:
         items = [await self._serialize_subscription(document) for document in documents]
         return SubscriptionListResponse(module="recurring", total=len(items), items=items)
 
-    async def get_subscription(self, subscription_id: str) -> SubscriptionResponse:
-        document = await self._get_subscription_document_or_404(subscription_id)
+    async def get_subscription(
+        self, subscription_id: str, acting_user_id: str | None = None
+    ) -> SubscriptionResponse:
+        document = await self._get_owned_subscription_or_error(subscription_id, acting_user_id)
         return SubscriptionResponse(
             module="recurring",
             subscription=await self._serialize_subscription(document),
         )
 
-    async def set_status(self, subscription_id: str, new_status: str) -> SubscriptionResponse:
-        document = await self._get_subscription_document_or_404(subscription_id)
+    async def set_status(
+        self, subscription_id: str, new_status: str, acting_user_id: str | None = None
+    ) -> SubscriptionResponse:
+        document = await self._get_owned_subscription_or_error(subscription_id, acting_user_id)
         if document["status"] == "cancelled":
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
@@ -105,8 +109,10 @@ class RecurringService:
             subscription=await self._serialize_subscription(document),
         )
 
-    async def generate_occurrence(self, subscription_id: str) -> GenerateOccurrenceResponse:
-        document = await self._get_subscription_document_or_404(subscription_id)
+    async def generate_occurrence(
+        self, subscription_id: str, acting_user_id: str | None = None
+    ) -> GenerateOccurrenceResponse:
+        document = await self._get_owned_subscription_or_error(subscription_id, acting_user_id)
         if document["status"] != "active":
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
@@ -151,8 +157,10 @@ class RecurringService:
             matches_total=len(service_request.matches),
         )
 
-    async def list_occurrences(self, subscription_id: str) -> OccurrenceListResponse:
-        await self._get_subscription_document_or_404(subscription_id)
+    async def list_occurrences(
+        self, subscription_id: str, acting_user_id: str | None = None
+    ) -> OccurrenceListResponse:
+        await self._get_owned_subscription_or_error(subscription_id, acting_user_id)
         documents = await self._repository.list_occurrences(subscription_id)
         return OccurrenceListResponse(
             module="recurring",
@@ -188,6 +196,22 @@ class RecurringService:
         days_in_month = [31, 29 if year % 4 == 0 and (year % 100 != 0 or year % 400 == 0) else 28,
                          31, 30, 31, 30, 31, 31, 30, 31, 30, 31][month - 1]
         return date(year, month, min(current.day, days_in_month))
+
+    async def _get_owned_subscription_or_error(
+        self, subscription_id: str, acting_user_id: str | None
+    ) -> dict:
+        """404 si no existe; 403 si existe pero es de otro cliente.
+
+        ``acting_user_id=None`` deja pasar (retrocompatibilidad para llamadas
+        internas); las rutas HTTP siempre lo pasan.
+        """
+        document = await self._get_subscription_document_or_404(subscription_id)
+        if acting_user_id is not None and document["client_id"] != acting_user_id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="esta suscripcion pertenece a otro cliente",
+            )
+        return document
 
     async def _get_subscription_document_or_404(self, subscription_id: str) -> dict:
         try:

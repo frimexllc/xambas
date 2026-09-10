@@ -1,23 +1,30 @@
 import { useEffect, useState } from "react";
 import { Elements, PaymentElement, useElements, useStripe } from "@stripe/react-stripe-js";
-import { api } from "./lib/api.js";
+import { api, setAuthToken } from "./lib/api.js";
 import { getStripe } from "./lib/stripe.js";
 import { clearSession, loadSession, saveSession } from "./lib/session.js";
 import "./App.css";
 
 const COUNTRY_CODE = "MX";
 
+// Rehidrata el token Bearer antes del primer render para que las llamadas
+// autenticadas (recurring, ai-quote) funcionen tras recargar la página.
+const initialSession = loadSession();
+setAuthToken(initialSession?.token ?? null);
+
 export default function App() {
-  const [session, setSession] = useState(() => loadSession());
+  const [session, setSession] = useState(initialSession);
   const [error, setError] = useState(null);
 
   function handleAuthenticated(newSession) {
     saveSession(newSession);
+    setAuthToken(newSession?.token ?? null);
     setSession(newSession);
   }
 
   function handleLogout() {
     clearSession();
+    setAuthToken(null);
     setSession(null);
   }
 

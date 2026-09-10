@@ -56,7 +56,8 @@ Registro+OTP, categorías/subcategorías, service_requests con matching automát
 5. **Llaves reales**: Twilio (OTP SMS) — el usuario lo activará más tarde; R2 pendiente.
 
 ## Deuda técnica / mejoras (no bloqueantes)
-- Auth por token en endpoints `/api/recurring/*` y `/api/ai-quote/*` (hoy solo por client_id, Fase 0).
+- ✅ **Auth por token en `/api/recurring/*` y `/api/ai-quote/*`** (Sep 2026): dependencia `get_current_user` (header `Authorization: Bearer <token>`, mismo token que emite `otp/verify`) en `app/modules/identity/dependencies.py`. El `client_id` se toma del token, nunca del body; los endpoints por-id validan propiedad (403 si la suscripción/cotización es de otro cliente). `/status` y `/ai-quote/files/*` quedan públicos a propósito (este último es URL-capacidad, como `/milestones/files/*`, porque las `<img>` del navegador no mandan header). Frontend `apps/client`: `lib/api.js` adjunta el Bearer y rehidrata el token al cargar.
+  - Pendiente relacionado: aplicar el mismo patrón a `/api/milestones/*` y a los endpoints de `matching`/`billing` que hoy confían en `client_id`/`provider_user_id` por query.
 - Refactor: dividir `apps/client/src/App.jsx` (>1500 líneas) en archivos por pestaña (RequestsPanel, RecurringPanel, AiQuotePanel).
 - `ai_quote`: down-scale de imágenes (PIL) antes de enviar a Groq para grandes cargas.
 - Preview: exponer también web/provider/admin (hoy solo cliente; se alterna con `PREVIEW_APP`).

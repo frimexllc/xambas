@@ -200,6 +200,40 @@ class IdentityService:
             ),
         )
 
+    async def get_user_from_token(self, token: str) -> UserSummary:
+        """Resuelve el usuario dueño de un token de sesión (header Bearer).
+
+        El token se guarda hasheado; Mongo tiene un índice TTL sobre
+        ``expires_at`` pero la limpieza no es inmediata, así que revalidamos la
+        expiración aquí.
+        """
+        if not token:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="token de sesion vacio",
+            )
+        session_document = await self._repository.get_active_session_by_token_hash(hash_secret(token))
+        if session_document is None:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="token de sesion invalido o revocado",
+            )
+        expires_at = session_document["expires_at"]
+        if expires_at.tzinfo is None:
+            expires_at = expires_at.replace(tzinfo=timezone.utc)
+        if expires_at < utc_now():
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="la sesion expiro, vuelve a verificar tu telefono",
+            )
+        user_document = await self._get_user_document_or_404(session_document["user_id"])
+        if not user_document.get("is_active", True):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="la cuenta esta desactivada",
+            )
+        return self._serialize_user(user_document)
+
     async def list_users(self) -> UserListResponse:
         documents = await self._repository.list_users()
         return UserListResponse(

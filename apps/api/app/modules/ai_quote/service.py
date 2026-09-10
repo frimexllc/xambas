@@ -227,19 +227,26 @@ class AiQuoteService:
             items=[self._serialize_quote(document) for document in documents],
         )
 
-    async def get_estimate(self, quote_id: str) -> QuoteResponse:
+    async def get_estimate(self, quote_id: str, acting_user_id: str | None = None) -> QuoteResponse:
         try:
             document = await self._repository.get_quote_by_id(quote_id)
         except InvalidId as exc:
             raise HTTPException(status.HTTP_400_BAD_REQUEST, "quote_id inválido") from exc
         if document is None:
             raise HTTPException(status.HTTP_404_NOT_FOUND, "cotización no encontrada")
+        if acting_user_id is not None and document.get("client_id") != acting_user_id:
+            raise HTTPException(status.HTTP_403_FORBIDDEN, "esta cotización pertenece a otro cliente")
         return QuoteResponse(module="ai_quote", quote=self._serialize_quote(document))
 
-    async def get_file(self, path: str) -> tuple[bytes, str]:
+    async def get_file(self, path: str, acting_user_id: str | None = None) -> tuple[bytes, str]:
         prefix = f"{settings.storage_app_name}/ai-quote/"
         if not path.startswith(prefix):
             raise HTTPException(status.HTTP_404_NOT_FOUND, "imagen no encontrada")
+        # Las rutas son `<app>/ai-quote/<client_id>/<archivo>`: solo el dueño la ve.
+        if acting_user_id is not None:
+            segments = path[len(prefix):].split("/", 1)
+            if not segments or segments[0] != acting_user_id:
+                raise HTTPException(status.HTTP_404_NOT_FOUND, "imagen no encontrada")
         try:
             return await asyncio.to_thread(object_storage.get_object, path)
         except Exception as exc:  # noqa: BLE001

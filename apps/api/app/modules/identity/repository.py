@@ -167,3 +167,6 @@ class IdentityRepository:
         result = await self._db.sessions.insert_one(document)
         document["_id"] = result.inserted_id
         return document
+
+    async def get_active_session_by_token_hash(self, token_hash: str) -> dict[str, Any] | None:
+        return await self._db.sessions.find_one({"token_hash": token_hash, "status": "active"})

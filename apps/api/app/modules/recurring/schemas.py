@@ -8,7 +8,9 @@ SubscriptionStatus = Literal["active", "paused", "cancelled"]
 
 
 class SubscriptionCreateRequest(BaseModel):
-    client_id: str
+    # El cliente se toma del token de sesión (header Bearer); este campo se
+    # ignora si viene en el body y se conserva solo por retrocompatibilidad.
+    client_id: str | None = None
     category_id: str
     title: str = Field(min_length=4, max_length=140)
     description: str = Field(min_length=10, max_length=2000)
