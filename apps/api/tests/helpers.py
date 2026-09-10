@@ -126,3 +126,43 @@ def authed_provider(base_url: str, category_id: str, coverage_zones: list[str]) 
     user = bootstrap_provider(base_url, category_id, coverage_zones)
     token = verify_otp_for(base_url, user["id"])
     return SimpleNamespace(user=user, token=token, session=_authed_session(token))
+
+
+def accept_match_for(client_ctx, provider_ctx, zone: str, category_id: str) -> dict:
+    """service_request (como cliente) → matching → aceptar el match (como proveedor).
+
+    Devuelve un dict con match_id/request_id/provider_profile_id/provider_user_id/client_id.
+    """
+    payload = {
+        "category_id": category_id,
+        "title": "TEST match aceptado",
+        "description": "Solicitud de prueba para armar un match aceptado.",
+        "country_code": "MX",
+        "city": "CDMX",
+        "coverage_zone": zone,
+        "budget_amount": 1000.0,
+    }
+    r = client_ctx.session.post(f"{BASE_URL}/api/matching/service-requests", json=payload)
+    assert r.status_code == 200, r.text
+    request_id = r.json()["request"]["id"]
+
+    m = client_ctx.session.get(f"{BASE_URL}/api/matching/service-requests/{request_id}/matches")
+    assert m.status_code == 200, m.text
+    mine = [x for x in m.json()["items"] if x["provider_user_id"] == provider_ctx.user["id"]]
+    assert mine, f"sin match para el proveedor en zona {zone}"
+    match_id = mine[0]["id"]
+
+    ac = provider_ctx.session.post(
+        f"{BASE_URL}/api/matching/matches/{match_id}/accept",
+        json={"provider_user_id": provider_ctx.user["id"]},
+    )
+    assert ac.status_code == 200, ac.text
+    accepted = ac.json()
+    assert accepted["status"] == "accepted"
+    return {
+        "match_id": match_id,
+        "request_id": request_id,
+        "provider_profile_id": accepted["provider_profile_id"],
+        "provider_user_id": provider_ctx.user["id"],
+        "client_id": client_ctx.user["id"],
+    }

@@ -9,7 +9,7 @@ import uuid
 import pytest
 import requests
 
-from tests.helpers import BASE_URL, authed_client, authed_provider
+from tests.helpers import BASE_URL, accept_match_for, authed_client, authed_provider
 
 
 @pytest.fixture(scope="module")
@@ -43,44 +43,7 @@ def _bearer(token: str) -> dict:
 
 @pytest.fixture(scope="module")
 def accepted_match(client_ctx, provider_ctx, zone, limpieza_basica_category_id):
-    """service_request → matching → aceptar el match del proveedor.
-
-    `/api/matching/*` todavía no lleva auth, así que se usa `requests` directo.
-    """
-    payload = {
-        "client_id": client_ctx.user["id"],
-        "category_id": limpieza_basica_category_id,
-        "title": "TEST milestones request",
-        "description": "Solicitud de prueba para milestones - limpieza basica.",
-        "country_code": "MX",
-        "city": "CDMX",
-        "coverage_zone": zone,
-        "budget_amount": 1000.0,
-    }
-    r = requests.post(f"{BASE_URL}/api/matching/service-requests", json=payload)
-    assert r.status_code == 200, r.text
-    request_id = r.json()["request"]["id"]
-
-    m = requests.get(f"{BASE_URL}/api/matching/service-requests/{request_id}/matches")
-    assert m.status_code == 200, m.text
-    mine = [x for x in m.json()["items"] if x["provider_user_id"] == provider_ctx.user["id"]]
-    assert mine, f"Sin match para el proveedor en zona {zone}"
-    match_id = mine[0]["id"]
-
-    ac = requests.post(
-        f"{BASE_URL}/api/matching/matches/{match_id}/accept",
-        json={"provider_user_id": provider_ctx.user["id"]},
-    )
-    assert ac.status_code == 200, ac.text
-    accepted = ac.json()
-    assert accepted["status"] == "accepted"
-    return {
-        "match_id": match_id,
-        "request_id": request_id,
-        "provider_profile_id": accepted["provider_profile_id"],
-        "provider_user_id": provider_ctx.user["id"],
-        "client_id": client_ctx.user["id"],
-    }
+    return accept_match_for(client_ctx, provider_ctx, zone, limpieza_basica_category_id)
 
 
 # ------------- STATUS (público) -------------
@@ -241,14 +204,19 @@ def test_list_plans_as_provider(provider_ctx):
     assert all(p["provider_user_id"] == provider_ctx.user["id"] for p in d["items"])
 
 
-# ------------- PROVIDER DASHBOARD (sin auth todavía) -------------
-def test_provider_dashboard(accepted_match):
+# ------------- PROVIDER DASHBOARD -------------
+def test_provider_dashboard_requires_auth(accepted_match):
     r = requests.get(
         f"{BASE_URL}/api/provider/dashboard",
-        params={
-            "provider_user_id": accepted_match["provider_user_id"],
-            "provider_profile_id": accepted_match["provider_profile_id"],
-        },
+        params={"provider_profile_id": accepted_match["provider_profile_id"]},
+    )
+    assert r.status_code == 401
+
+
+def test_provider_dashboard(provider_ctx, accepted_match):
+    r = provider_ctx.session.get(
+        f"{BASE_URL}/api/provider/dashboard",
+        params={"provider_profile_id": accepted_match["provider_profile_id"]},
     )
     assert r.status_code == 200, r.text
     d = r.json()
@@ -259,12 +227,19 @@ def test_provider_dashboard(accepted_match):
     assert "recurring_visits" in d
 
 
-def test_provider_dashboard_404(accepted_match):
-    r = requests.get(
+def test_provider_dashboard_foreign_profile_403(provider_ctx, other_provider_ctx):
+    pr = requests.get(f"{BASE_URL}/api/identity/users/{provider_ctx.user['id']}")
+    foreign_profile_id = pr.json()["provider_profile"]["id"]
+    resp = other_provider_ctx.session.get(
         f"{BASE_URL}/api/provider/dashboard",
-        params={
-            "provider_user_id": accepted_match["provider_user_id"],
-            "provider_profile_id": "000000000000000000000000",
-        },
+        params={"provider_profile_id": foreign_profile_id},
+    )
+    assert resp.status_code == 403
+
+
+def test_provider_dashboard_404(provider_ctx):
+    r = provider_ctx.session.get(
+        f"{BASE_URL}/api/provider/dashboard",
+        params={"provider_profile_id": "000000000000000000000000"},
     )
     assert r.status_code == 404

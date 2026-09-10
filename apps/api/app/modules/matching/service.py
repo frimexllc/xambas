@@ -126,17 +126,27 @@ class MatchingService:
             items=[self._serialize_service_request(document) for document in documents],
         )
 
-    async def get_service_request(self, request_id: str) -> ServiceRequestResponse:
+    async def get_service_request(
+        self, request_id: str, acting_user_id: str | None = None
+    ) -> ServiceRequestResponse:
         request_document = await self._get_service_request_document_or_404(request_id)
         match_documents = await self._repository.list_matches_for_request(request_id)
+        await self._assert_request_participant(request_document, match_documents, acting_user_id)
         return ServiceRequestResponse(
             module="matching",
             request=self._serialize_service_request(request_document),
             matches=[self._serialize_match(document) for document in match_documents],
         )
 
-    async def rerun_matching(self, request_id: str) -> MatchListResponse:
+    async def rerun_matching(
+        self, request_id: str, acting_user_id: str | None = None
+    ) -> MatchListResponse:
         request_document = await self._get_service_request_document_or_404(request_id)
+        if acting_user_id is not None and request_document["client_id"] != acting_user_id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="solo el cliente de la solicitud puede re-lanzar el matching",
+            )
         category_document = await self._get_category_document_or_404(request_document["category_id"])
         match_documents = await self._run_matching_for_request_document(request_document, category_document)
         return MatchListResponse(
@@ -146,9 +156,12 @@ class MatchingService:
             items=[self._serialize_match(document) for document in match_documents],
         )
 
-    async def list_matches(self, request_id: str) -> MatchListResponse:
-        await self._get_service_request_document_or_404(request_id)
+    async def list_matches(
+        self, request_id: str, acting_user_id: str | None = None
+    ) -> MatchListResponse:
+        request_document = await self._get_service_request_document_or_404(request_id)
         documents = await self._repository.list_matches_for_request(request_id)
+        await self._assert_request_participant(request_document, documents, acting_user_id)
         return MatchListResponse(
             module="matching",
             request_id=request_id,
@@ -183,6 +196,21 @@ class MatchingService:
         await self._repository.update_match_status(match_id, "accepted")
         document["status"] = "accepted"
         return self._serialize_match(document)
+
+    async def _assert_request_participant(
+        self, request_document: dict, match_documents: list[dict], acting_user_id: str | None
+    ) -> None:
+        """403 si el usuario no es el cliente de la solicitud ni un proveedor con match en ella."""
+        if acting_user_id is None:
+            return
+        if request_document["client_id"] == acting_user_id:
+            return
+        if any(m["provider_user_id"] == acting_user_id for m in match_documents):
+            return
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="no tienes acceso a esta solicitud",
+        )
 
     async def _get_category_document_or_404(self, category_id: str) -> dict:
         try:

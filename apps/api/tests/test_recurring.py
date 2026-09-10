@@ -201,7 +201,6 @@ def test_pause_resume_cancel_flow(client_ctx, limpieza_basica_category_id):
 # ----------------- REGRESIÓN: matching sigue funcionando -----------------
 def test_regression_create_service_request(client_ctx, limpieza_basica_category_id):
     payload = {
-        "client_id": client_ctx.user["id"],
         "category_id": limpieza_basica_category_id,
         "title": "Solicitud regresion",
         "description": "Prueba de regresion del flujo de solicitudes.",
@@ -210,7 +209,7 @@ def test_regression_create_service_request(client_ctx, limpieza_basica_category_
         "coverage_zone": "Roma Norte",
         "budget_amount": 400.0,
     }
-    r = requests.post(f"{BASE_URL}/api/matching/service-requests", json=payload)
+    r = client_ctx.session.post(f"{BASE_URL}/api/matching/service-requests", json=payload)
     assert r.status_code == 200, r.text
     assert "request" in r.json()
 

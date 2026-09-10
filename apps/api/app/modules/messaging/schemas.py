@@ -22,8 +22,10 @@ class ThreadSummary(BaseModel):
 
 
 class MessageCreateRequest(BaseModel):
-    sender_id: str
-    sender_role: SenderRole
+    # sender_id / sender_role salen del token y del hilo; opcionales/ignorados
+    # en el body por retrocompatibilidad.
+    sender_id: str | None = None
+    sender_role: SenderRole | None = None
     body: str = Field(min_length=1, max_length=2000)
 
 

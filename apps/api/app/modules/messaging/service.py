@@ -29,9 +29,12 @@ class MessagingService:
             collections=["threads", "messages"],
         )
 
-    async def get_or_create_thread(self, payload: ThreadGetOrCreateRequest) -> ThreadSummary:
+    async def get_or_create_thread(
+        self, payload: ThreadGetOrCreateRequest, acting_user_id: str | None = None
+    ) -> ThreadSummary:
         existing = await self._repository.get_thread_by_match_id(payload.match_id)
         if existing is not None:
+            self._assert_thread_participant(existing, acting_user_id)
             return await self._serialize_thread(existing)
 
         try:
@@ -53,6 +56,15 @@ class MessagingService:
                 detail="service_request no encontrado",
             )
 
+        if acting_user_id is not None and acting_user_id not in (
+            request_document["client_id"],
+            match_document["provider_user_id"],
+        ):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="no eres parte de este match",
+            )
+
         thread_document = await self._repository.create_thread(
             match_id=payload.match_id,
             request_id=match_document["request_id"],
@@ -61,8 +73,11 @@ class MessagingService:
         )
         return await self._serialize_thread(thread_document)
 
-    async def list_messages(self, thread_id: str) -> MessageListResponse:
-        await self._get_thread_or_404(thread_id)
+    async def list_messages(
+        self, thread_id: str, acting_user_id: str | None = None
+    ) -> MessageListResponse:
+        thread_document = await self._get_thread_or_404(thread_id)
+        self._assert_thread_participant(thread_document, acting_user_id)
         documents = await self._repository.list_messages(thread_id)
         return MessageListResponse(
             module="messaging",
@@ -71,14 +86,16 @@ class MessagingService:
             items=[self._serialize_message(document) for document in documents],
         )
 
-    async def create_message(self, thread_id: str, payload: MessageCreateRequest) -> MessageSummary:
+    async def create_message(
+        self, thread_id: str, payload: MessageCreateRequest, acting_user_id: str | None = None
+    ) -> MessageSummary:
         thread_document = await self._get_thread_or_404(thread_id)
-        allowed_senders = {thread_document["client_id"], thread_document["provider_user_id"]}
-        if payload.sender_id not in allowed_senders:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="sender_id no pertenece a este hilo",
-            )
+        # El emisor es el usuario del token, no lo que venga en el body.
+        sender_id = acting_user_id if acting_user_id is not None else payload.sender_id
+        self._assert_thread_participant(thread_document, sender_id)
+        sender_role = (
+            "client" if sender_id == thread_document["client_id"] else "provider"
+        )
 
         raw_body = payload.body.strip()
         contact_unlocked = await self._is_contact_unlocked(thread_document["match_id"])
@@ -89,8 +106,8 @@ class MessagingService:
 
         document = await self._repository.create_message(
             thread_id=thread_id,
-            sender_id=payload.sender_id,
-            sender_role=payload.sender_role,
+            sender_id=sender_id,
+            sender_role=sender_role,
             body=body,
             raw_body=raw_body,
             flagged=flagged,
@@ -105,6 +122,15 @@ class MessagingService:
         # cambiar a verificar el estado del pago, no del match.
         match_document = await self._matching_repository.get_match_by_id(match_id)
         return match_document is not None and match_document.get("status") == "accepted"
+
+    def _assert_thread_participant(self, thread_document: dict, acting_user_id: str | None) -> None:
+        if acting_user_id is None:
+            return
+        if acting_user_id not in (thread_document["client_id"], thread_document["provider_user_id"]):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="no eres parte de esta conversacion",
+            )
 
     async def _get_thread_or_404(self, thread_id: str) -> dict:
         try:

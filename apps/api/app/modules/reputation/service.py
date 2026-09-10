@@ -2,6 +2,7 @@ from bson.errors import InvalidId
 from fastapi import HTTPException, status
 from pymongo.errors import DuplicateKeyError
 
+from app.modules.matching.repository import MatchingRepository
 from app.modules.reputation.repository import ReputationRepository
 from app.modules.reputation.schemas import (
     ProviderReputationResponse,
@@ -15,6 +16,7 @@ from app.modules.reputation.schemas import (
 class ReputationService:
     def __init__(self) -> None:
         self._repository = ReputationRepository()
+        self._matching_repository = MatchingRepository()
 
     async def ensure_indexes(self) -> None:
         await self._repository.ensure_indexes()
@@ -26,14 +28,31 @@ class ReputationService:
             collections=["reviews"],
         )
 
-    async def create_review(self, payload: ReviewCreateRequest) -> ReviewSummary:
+    async def create_review(
+        self, payload: ReviewCreateRequest, acting_client_id: str | None = None
+    ) -> ReviewSummary:
         provider_document = await self._get_provider_profile_or_404(payload.provider_profile_id)
+        client_id = acting_client_id if acting_client_id is not None else payload.client_id
+
+        if acting_client_id is not None:
+            request_document = await self._matching_repository.get_service_request_by_id(
+                payload.request_id
+            )
+            if request_document is None:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND, detail="service_request no encontrado"
+                )
+            if request_document["client_id"] != acting_client_id:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="solo puedes resenar tus propias solicitudes",
+                )
 
         try:
             review_document = await self._repository.create_review(
                 request_id=payload.request_id,
                 provider_profile_id=payload.provider_profile_id,
-                client_id=payload.client_id,
+                client_id=client_id,
                 rating=payload.rating,
                 comment=payload.comment.strip() if payload.comment else None,
             )

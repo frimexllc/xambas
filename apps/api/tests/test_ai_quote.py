@@ -159,8 +159,12 @@ def test_get_file_serves_image(created_quote: dict) -> None:
 
 
 # --- regresión ligera --------------------------------------------------
-def test_matching_service_requests_still_ok() -> None:
-    r = requests.get(f"{BASE_URL}/api/matching/service-requests", timeout=REQUEST_TIMEOUT)
+def test_matching_service_requests_still_ok(client_ctx) -> None:
+    r = client_ctx.session.get(f"{BASE_URL}/api/matching/service-requests", timeout=REQUEST_TIMEOUT)
     assert r.status_code == 200, r.text
     body = r.json()
     assert "items" in body or "service_requests" in body or "requests" in body
+
+
+def test_matching_service_requests_requires_auth() -> None:
+    assert requests.get(f"{BASE_URL}/api/matching/service-requests").status_code == 401
