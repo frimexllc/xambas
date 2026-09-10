@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, Header, Query, Request
 
+from app.core.config import settings
 from app.modules.admin.router import require_admin
 from app.modules.admin.schemas import AdminSummary
 from app.modules.billing.payments_service import payments_service
@@ -96,10 +97,11 @@ async def admin_list_payments(_: AdminSummary = Depends(require_admin)) -> Payme
 
 @router.post("/connect/onboarding-link")
 async def create_connect_onboarding(payload: ConnectOnboardingRequest) -> ConnectOnboardingResponse:
+    base = settings.provider_app_url.rstrip("/")
     return await payments_service.create_connect_onboarding(
         payload.provider_profile_id,
-        refresh_url="http://localhost:4174/connect/refresh",
-        return_url="http://localhost:4174/connect/return",
+        refresh_url=f"{base}/connect/refresh",
+        return_url=f"{base}/connect/return",
     )
 
 
