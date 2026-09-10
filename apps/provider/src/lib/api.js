@@ -46,6 +46,8 @@ export const api = {
     request("/identity/otp/request", { method: "POST", body: JSON.stringify(payload) }),
   verifyOtp: (payload) =>
     request("/identity/otp/verify", { method: "POST", body: JSON.stringify(payload) }),
+  login: (payload) =>
+    request("/identity/login", { method: "POST", body: JSON.stringify(payload) }),
 
   // matching
   listCategories: (parentId) =>

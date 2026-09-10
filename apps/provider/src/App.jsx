@@ -67,7 +67,8 @@ export default function App() {
 // ---------------------------------------------------------------------------
 
 function AuthFlow({ onAuthenticated, onError }) {
-  const [step, setStep] = useState("register"); // register | otp
+  const [mode, setMode] = useState("register"); // register | login
+  const [step, setStep] = useState("form"); // form | otp
   const [loading, setLoading] = useState(false);
   const [categories, setCategories] = useState([]);
   const [form, setForm] = useState({
@@ -79,8 +80,16 @@ function AuthFlow({ onAuthenticated, onError }) {
     insuranceVerified: false,
     licenseVerified: false,
   });
+  const [identifier, setIdentifier] = useState("");
   const [otpState, setOtpState] = useState(null);
   const [code, setCode] = useState("");
+
+  function switchMode(next) {
+    setMode(next);
+    setStep("form");
+    setOtpState(null);
+    setCode("");
+  }
 
   useEffect(() => {
     api
@@ -132,7 +141,26 @@ function AuthFlow({ onAuthenticated, onError }) {
         userId,
         challengeId: otp.challenge_id,
         debugCode: otp.debug_code,
-        providerProfileId: result.provider_profile.id,
+        target: otp.delivery_target || form.phone,
+      });
+      setStep("otp");
+    } catch (err) {
+      onError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handleLogin(event) {
+    event.preventDefault();
+    setLoading(true);
+    try {
+      const result = await api.login({ identifier: identifier.trim() });
+      setOtpState({
+        userId: result.user_id,
+        challengeId: result.challenge_id,
+        debugCode: result.debug_code,
+        target: result.delivery_target,
       });
       setStep("otp");
     } catch (err) {
@@ -152,13 +180,15 @@ function AuthFlow({ onAuthenticated, onError }) {
         code: code.trim(),
         device_name: "xambas-provider-web",
       });
+      // El perfil de proveedor se resuelve siempre desde la API (cubre login y registro).
+      const profile = await api.getUser(result.user.id);
       onAuthenticated({
         userId: result.user.id,
         email: result.user.email,
         phone: result.user.phone,
         token: result.session.token,
-        providerProfileId: otpState.providerProfileId,
-        businessName: form.businessName.trim(),
+        providerProfileId: profile.provider_profile?.id,
+        businessName: profile.provider_profile?.business_name || "",
       });
     } catch (err) {
       onError(err.message);
@@ -172,7 +202,7 @@ function AuthFlow({ onAuthenticated, onError }) {
       <section className="card auth-card">
         <h2>Verifica tu telefono</h2>
         <p className="muted">
-          Enviamos un codigo por SMS a <strong>{form.phone}</strong>.
+          Enviamos un codigo por SMS a <strong>{otpState?.target}</strong>.
         </p>
         {otpState?.debugCode && (
           <p className="hint">
@@ -193,7 +223,39 @@ function AuthFlow({ onAuthenticated, onError }) {
           <button className="btn btn-primary" type="submit" disabled={loading}>
             {loading ? "Verificando..." : "Verificar y entrar"}
           </button>
+          <button type="button" className="btn btn-ghost" onClick={() => switchMode(mode)}>
+            ← Empezar de nuevo
+          </button>
         </form>
+      </section>
+    );
+  }
+
+  if (mode === "login") {
+    return (
+      <section className="card auth-card">
+        <h2>Inicia sesion</h2>
+        <p className="muted">Te enviaremos un codigo al telefono de tu cuenta.</p>
+        <form onSubmit={handleLogin} className="stack">
+          <label>
+            Telefono o correo
+            <input
+              required
+              value={identifier}
+              onChange={(e) => setIdentifier(e.target.value)}
+              placeholder="+5215500000000"
+            />
+          </label>
+          <button className="btn btn-primary" type="submit" disabled={loading}>
+            {loading ? "Enviando codigo..." : "Enviar codigo"}
+          </button>
+        </form>
+        <p className="muted auth-switch">
+          ¿No tienes cuenta?{" "}
+          <button type="button" className="link-btn" onClick={() => switchMode("register")}>
+            Registra tu negocio
+          </button>
+        </p>
       </section>
     );
   }
@@ -278,6 +340,12 @@ function AuthFlow({ onAuthenticated, onError }) {
           {loading ? "Creando..." : "Continuar"}
         </button>
       </form>
+      <p className="muted auth-switch">
+        ¿Ya tienes cuenta?{" "}
+        <button type="button" className="link-btn" onClick={() => switchMode("login")}>
+          Inicia sesion
+        </button>
+      </p>
     </section>
   );
 }

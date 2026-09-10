@@ -275,6 +275,11 @@ La documentacion interactiva (Swagger) queda disponible en `http://localhost:800
   - `TWILIO_VERIFY_SERVICE_SID`
 - El backend mantiene politica local de intentos con `OTP_MAX_ATTEMPTS`.
 - Las sesiones se crean solo despues de una verificacion OTP exitosa.
+- **Login de una cuenta existente**: `POST /api/identity/login` con
+  `{ "identifier": "<telefono o correo>" }` busca al usuario y dispara un OTP
+  (`purpose=login`); se completa con `POST /api/identity/otp/verify`, que es lo
+  que emite la sesion. Antes solo existia `bootstrap` (que falla con 409 si la
+  cuenta ya existe), asi que "iniciar sesion" era volver a leer `localStorage`.
 
 ### Autenticacion de endpoints de usuario (Bearer)
 

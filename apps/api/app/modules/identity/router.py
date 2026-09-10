@@ -3,6 +3,8 @@ from fastapi import APIRouter
 from app.modules.identity.schemas import (
     IdentityStatusResponse,
     IdentityUserResponse,
+    LoginStartRequest,
+    LoginStartResponse,
     OtpRequestPayload,
     OtpRequestResponse,
     OtpVerifyPayload,
@@ -28,6 +30,15 @@ async def identity_bootstrap(payload: UserBootstrapRequest) -> UserBootstrapResp
 @router.get("/users/{user_id}")
 async def identity_get_user(user_id: str) -> IdentityUserResponse:
     return await identity_service.get_user(user_id)
+
+
+@router.post("/login")
+async def identity_login(payload: LoginStartRequest) -> LoginStartResponse:
+    """Inicia sesión en una cuenta existente (teléfono o correo → OTP).
+
+    Se completa con ``POST /identity/otp/verify``.
+    """
+    return await identity_service.start_login(payload)
 
 
 @router.post("/otp/request")

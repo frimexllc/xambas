@@ -224,6 +224,22 @@ textarea:focus {
   color: var(--text);
 }
 
+.auth-switch {
+  margin-top: 14px;
+  text-align: center;
+}
+
+.link-btn {
+  background: none;
+  border: none;
+  padding: 0;
+  color: var(--accent, #1B3A5C);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: underline;
+}
+
 .muted {
   color: var(--muted);
   font-size: 13px;

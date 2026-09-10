@@ -9,6 +9,7 @@ vi.mock("../lib/api.js", () => ({
     bootstrap: vi.fn(),
     requestOtp: vi.fn(),
     verifyOtp: vi.fn(),
+    login: vi.fn(),
   },
 }));
 
@@ -48,6 +49,38 @@ describe("AuthFlow", () => {
       phone: "+521",
       token: "tok-1",
     });
+  });
+
+  it("login: identificador → OTP → sesión", async () => {
+    api.login.mockResolvedValue({
+      user_id: "u9",
+      challenge_id: "c9",
+      debug_code: "654321",
+      delivery_target: "+52155****99",
+    });
+    api.verifyOtp.mockResolvedValue({
+      user: { id: "u9", email: "x@y.com", phone: "+521" },
+      session: { token: "tok-login" },
+    });
+    const onAuthenticated = vi.fn();
+    const user = userEvent.setup();
+
+    render(<AuthFlow onAuthenticated={onAuthenticated} onError={vi.fn()} />);
+    await user.click(screen.getByRole("button", { name: /inicia sesion/i }));
+
+    await user.type(screen.getByPlaceholderText("+5215500000000"), "+5215551234599");
+    await user.click(screen.getByRole("button", { name: /enviar codigo/i }));
+
+    expect(await screen.findByText("654321")).toBeInTheDocument();
+    expect(api.login).toHaveBeenCalledWith({ identifier: "+5215551234599" });
+    expect(api.bootstrap).not.toHaveBeenCalled();
+
+    await user.type(screen.getByPlaceholderText("123456"), "654321");
+    await user.click(screen.getByRole("button", { name: /verificar y entrar/i }));
+
+    expect(onAuthenticated).toHaveBeenCalledWith(
+      expect.objectContaining({ userId: "u9", token: "tok-login" })
+    );
   });
 
   it("propaga el error de bootstrap sin avanzar al paso OTP", async () => {

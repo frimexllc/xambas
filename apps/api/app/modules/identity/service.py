@@ -13,6 +13,8 @@ from app.modules.identity.repository import IdentityRepository
 from app.modules.identity.schemas import (
     IdentityStatusResponse,
     IdentityUserResponse,
+    LoginStartRequest,
+    LoginStartResponse,
     OtpRequestPayload,
     OtpRequestResponse,
     OtpVerifyPayload,
@@ -111,6 +113,41 @@ class IdentityService:
                 if provider_profile_document
                 else None
             ),
+        )
+
+    async def start_login(self, payload: LoginStartRequest) -> LoginStartResponse:
+        """Login de una cuenta existente: identificador (teléfono o correo) -> OTP.
+
+        Devuelve el ``user_id`` y el ``challenge_id`` para completar con
+        ``POST /identity/otp/verify`` (que es lo que crea la sesión).
+        """
+        identifier = payload.identifier.strip()
+        user_document = await self._repository.get_user_by_phone(identifier)
+        if user_document is None:
+            user_document = await self._repository.get_user_by_email(identifier)
+        if user_document is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="no hay una cuenta con ese telefono o correo",
+            )
+        if not user_document.get("is_active", True):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="la cuenta esta desactivada",
+            )
+
+        user_id = str(user_document["_id"])
+        otp_response = await self.request_otp(
+            OtpRequestPayload(user_id=user_id, purpose="login", channel=payload.channel)
+        )
+        return LoginStartResponse(
+            module="identity",
+            status="otp_sent",
+            user_id=user_id,
+            challenge_id=otp_response.challenge_id,
+            expires_at=otp_response.expires_at,
+            delivery_target=otp_response.delivery_target,
+            debug_code=otp_response.debug_code,
         )
 
     async def request_otp(self, payload: OtpRequestPayload) -> OtpRequestResponse:
