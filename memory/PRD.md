@@ -28,6 +28,7 @@ El supervisor (config read-only) corre `uvicorn server:app` en `/app/backend:800
   - `pytest` + `pillow` en `[dependency-groups] dev` de `apps/api/pyproject.toml`. Estado: 33 passed, 4 skipped (external) en local.
 - ✅ **Backend de almacenamiento `local`** en `core/storage.py` (`STORAGE_PROVIDER=local`, opcional `STORAGE_LOCAL_DIR`): sistema de archivos, sin red ni credenciales de Emergent. Lo usa el CI y sirve para desarrollo local sin llaves.
 - ✅ **Credenciales**: `memory/test_credentials.md` revisado — no contiene secretos reales (solo describe el flujo OTP dev). Se deja en el repo.
+- ✅ **Tests de frontend** (Sep 2026): Vitest + Testing Library + jsdom en `apps/client`. 6 archivos / 19 casos: `lib/api.js` (el Bearer se adjunta/limpia con `setAuthToken`), `AuthFlow` (registro→OTP→token), `ClientHome` (ruteo de pestañas), `RequestsPanel`, `RecurringPanel`, `AiQuotePanel` (con `api` mockeado). Corre en el job `frontend` del CI (`yarn workspace client test`). Se añadió `.yarnrc.yml` con un `packageExtensions` para declarar el peer `vitest` que `@testing-library/jest-dom` no declara (PnP estricto lo rechazaba).
 - ⚠️ **`.pnp.cjs`**: sigue desincronizándose (aparece como modificado casi siempre). Por eso el CI usa `yarn install` sin `--immutable`. Pendiente: regenerarlo limpio y commitearlo solo, o evaluar `nodeLinker: node-modules`.
 
 ## Implementado en esta sesión (Jun 2026)

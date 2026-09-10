@@ -462,14 +462,25 @@ uv run pytest      # usa http://localhost:8000 por defecto
 - `STORAGE_PROVIDER=local` guarda los archivos subidos en `apps/api/.storage/`
   (sin red ni credenciales de Emergent); útil para desarrollo local y CI.
 
+### Tests del frontend (`apps/client`)
+
+Vitest + Testing Library, con `jsdom`. Cubren el ruteo de pestañas, el flujo
+de registro/OTP, y cada panel (solicitudes, recurrentes, cotización IA) con
+`lib/api.js` mockeado.
+
+```bash
+yarn workspace client test        # una corrida (lo que usa el CI)
+yarn workspace client test:watch  # modo watch
+```
+
 ### GitHub Actions (`.github/workflows/ci.yml`)
 
 En cada push a `main`/`develop` y en cada PR:
 
 - **backend**: levanta Mongo, arranca la API (`STORAGE_PROVIDER=local`) y corre
   `pytest`.
-- **frontend**: `yarn install` y build de las 4 apps (`client`, `provider`,
-  `admin`, `web`).
+- **frontend**: `yarn install`, `yarn workspace client test` y build de las 4
+  apps (`client`, `provider`, `admin`, `web`).
 
 ## Siguientes pasos sugeridos
 

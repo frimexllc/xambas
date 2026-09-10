@@ -91,6 +91,9 @@ jobs:
         # queremos que eso tumbe el CI. Cuando se estabilice, subir a --immutable.
         run: yarn install
 
+      - name: Tests del cliente (Vitest)
+        run: yarn workspace client test
+
       - name: Build de las 4 apps
         run: |
           yarn build:client
