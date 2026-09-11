@@ -5,6 +5,7 @@ from fastapi import HTTPException, status
 from pymongo.errors import DuplicateKeyError
 
 from app.core.config import settings
+from app.core.rate_limit import rate_limiter
 from app.modules.identity.auth import build_expiration, build_session_expiration, build_session_token, hash_secret, utc_now
 from app.modules.identity.providers.base import OtpProvider
 from app.modules.identity.providers.dev_provider import DevOtpProvider
@@ -115,13 +116,27 @@ class IdentityService:
             ),
         )
 
-    async def start_login(self, payload: LoginStartRequest) -> LoginStartResponse:
+    async def start_login(
+        self, payload: LoginStartRequest, *, client_ip: str | None = None
+    ) -> LoginStartResponse:
         """Login de una cuenta existente: identificador (teléfono o correo) -> OTP.
 
         Devuelve el ``user_id`` y el ``challenge_id`` para completar con
         ``POST /identity/otp/verify`` (que es lo que crea la sesión).
         """
         identifier = payload.identifier.strip()
+        await rate_limiter.hit(
+            f"login:identifier:{identifier.lower()}",
+            limit=settings.login_limit_per_identifier,
+            window_minutes=settings.rate_limit_window_minutes,
+        )
+        if client_ip and settings.otp_provider != "dev":
+            await rate_limiter.hit(
+                f"login:ip:{client_ip}",
+                limit=settings.login_limit_per_ip,
+                window_minutes=settings.rate_limit_window_minutes,
+            )
+
         user_document = await self._repository.get_user_by_phone(identifier)
         if user_document is None:
             user_document = await self._repository.get_user_by_email(identifier)
@@ -150,8 +165,21 @@ class IdentityService:
             debug_code=otp_response.debug_code,
         )
 
-    async def request_otp(self, payload: OtpRequestPayload) -> OtpRequestResponse:
+    async def request_otp(
+        self, payload: OtpRequestPayload, *, client_ip: str | None = None
+    ) -> OtpRequestResponse:
         user_document = await self._get_user_document_or_404(payload.user_id)
+        await rate_limiter.hit(
+            f"otp_request:user:{payload.user_id}",
+            limit=settings.otp_request_limit_per_user,
+            window_minutes=settings.rate_limit_window_minutes,
+        )
+        if client_ip and settings.otp_provider != "dev":
+            await rate_limiter.hit(
+                f"otp_request:ip:{client_ip}",
+                limit=settings.otp_request_limit_per_ip,
+                window_minutes=settings.rate_limit_window_minutes,
+            )
         dispatch = self._build_otp_provider().request_code(user_document["phone"], payload.channel)
         expires_at = build_expiration(settings.otp_ttl_minutes)
         challenge_document = await self._repository.create_otp_challenge(

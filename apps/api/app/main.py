@@ -2,6 +2,7 @@ from fastapi import APIRouter, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.core.config import settings
+from app.core.rate_limit import rate_limiter
 from app.modules.admin.management_router import router as admin_management_router
 from app.modules.admin.router import router as admin_router
 from app.modules.admin.service import admin_service
@@ -53,6 +54,7 @@ api_router.include_router(content_router)
 @app.on_event("startup")
 async def on_startup() -> None:
     await identity_service.ensure_indexes()
+    await rate_limiter.ensure_indexes()
     await matching_service.ensure_indexes()
     await matching_service.ensure_launch_categories()
     await messaging_service.ensure_indexes()

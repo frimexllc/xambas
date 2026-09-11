@@ -280,6 +280,13 @@ La documentacion interactiva (Swagger) queda disponible en `http://localhost:800
   (`purpose=login`); se completa con `POST /api/identity/otp/verify`, que es lo
   que emite la sesion. Antes solo existia `bootstrap` (que falla con 409 si la
   cuenta ya existe), asi que "iniciar sesion" era volver a leer `localStorage`.
+- **Rate limiting** (`app/core/rate_limit.py`, ventana fija en Mongo): `POST
+  /identity/otp/request` y `POST /identity/login` limitan intentos por usuario
+  / identificador (`OTP_REQUEST_LIMIT_PER_USER`, `LOGIN_LIMIT_PER_IDENTIFIER`,
+  ambos por defecto 5 cada `RATE_LIMIT_WINDOW_MINUTES`, default 15). El límite
+  adicional por IP (`*_LIMIT_PER_IP`) solo se aplica con un proveedor de OTP
+  real (protege el gasto/abuso de SMS); en `OTP_PROVIDER=dev` no hay envío
+  real, así que se omite. Al superarse, la API responde `429`.
 
 ### Autenticacion de endpoints de usuario (Bearer)
 
