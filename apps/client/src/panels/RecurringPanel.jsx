@@ -42,24 +42,18 @@ export function RecurringPanel({ session, categories, onError }) {
 
   return (
     <div className="grid-2" data-testid="recurring-panel">
-      <section className="card folio-card">
-        <div className="folio-header">
-          <span className="mono-label accent">Orden de servicio</span>
-          <span className="folio-code">Nueva suscripción</span>
-        </div>
-        <div className="folio-body">
-          <h2>Nueva suscripción</h2>
-          <p className="muted">
-            Programa un servicio que se repite (limpieza semanal, mantenimiento mensual) y genera
-            cada visita con proveedores verificados, sin volver a publicar desde cero.
-          </p>
-          <NewSubscriptionForm
-            categories={categories}
-            session={session}
-            onCreated={refresh}
-            onError={onError}
-          />
-        </div>
+      <section className="card">
+        <h2>Nueva suscripción</h2>
+        <p className="muted">
+          Programa un servicio que se repite (limpieza semanal, mantenimiento mensual) y genera
+          cada visita con proveedores verificados, sin volver a publicar desde cero.
+        </p>
+        <NewSubscriptionForm
+          categories={categories}
+          session={session}
+          onCreated={refresh}
+          onError={onError}
+        />
       </section>
 
       <section className="card">

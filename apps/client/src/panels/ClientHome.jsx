@@ -5,14 +5,14 @@ import { RecurringPanel } from "./RecurringPanel.jsx";
 import { AiQuotePanel } from "./AiQuotePanel.jsx";
 import { MilestonesPanel } from "./MilestonesPanel.jsx";
 
-// Home del cliente: barra de pestañas + panel activo. Las categorías se cargan
-// una vez y se pasan a los paneles que las necesitan para sus <select>.
+// Home del cliente: control segmentado + panel activo. Las categorías se
+// cargan una vez y se pasan a los paneles que las necesitan para sus <select>.
 
 const TABS = [
-  { id: "requests", code: "S.01", label: "Solicitudes" },
-  { id: "recurring", code: "S.02", label: "Recurrentes" },
-  { id: "ai-quote", code: "S.03", label: "Cotización IA" },
-  { id: "milestones", code: "S.04", label: "Pagos por etapas" },
+  { id: "requests", label: "Solicitudes" },
+  { id: "recurring", label: "Recurrentes" },
+  { id: "ai-quote", label: "Cotización IA" },
+  { id: "milestones", label: "Pagos por etapas" },
 ];
 
 export function ClientHome({ session, onError }) {
@@ -29,20 +29,19 @@ export function ClientHome({ session, onError }) {
 
   return (
     <div className="stack">
-      <nav className="tab-bar" data-testid="client-tabs">
+      <div className="segmented" data-testid="client-tabs">
         {TABS.map((tab) => (
           <button
             key={tab.id}
             type="button"
-            className={`tab ${view === tab.id ? "tab-active" : ""}`}
+            className={`segment ${view === tab.id ? "segment-active" : ""}`}
             onClick={() => setView(tab.id)}
             data-testid={`tab-${tab.id}`}
           >
-            <span className="tab-code">{tab.code}</span>
             {tab.label}
           </button>
         ))}
-      </nav>
+      </div>
 
       {view === "requests" && (
         <RequestsPanel session={session} categories={categories} onError={onError} />

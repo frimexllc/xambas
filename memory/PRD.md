@@ -83,6 +83,29 @@ Fuente real usada (no inventada): `apps/web/src/App.css` y `App.jsx` — paleta,
 - Aplicado en **las 4 pestañas** + autenticación: folio header en las tarjetas de alta (nueva solicitud, nueva suscripción, cotización IA), panel técnico con grid para el rango de precio estimado, checklist con ícono de check para el alcance, sello de confianza al liberar un pago, códigos de folio mono en listas (solicitudes, planes por etapas).
 - Verificado: `yarn build:client` OK, **25/25 tests pasan** sin cambios (la reescritura de estilos no tocó comportamiento), capturas de pantalla del formulario de registro/login confirmando el render.
 - Pendiente si se quiere seguir: el mismo tratamiento en `apps/provider` (hoy solo tiene el pulido conservador del pase anterior); revisión visual del resto de subpantallas (chat, detalle de solicitud con matches) que heredan el sistema por CSS pero no se retocaron a mano una por una.
+
+**⚠️ SUPERADO por el rediseño Apple HIG de abajo.** El sistema "Orden de trabajo, refinado" (ticket/folio, plano técnico, sombra dura) duró una sola sesión: el usuario lo probó y dijo "no me gusta, usa el HIG de Apple, eso se ve genérico". Se deja esta sección como registro de que ya se intentó y por qué no funcionó (evitar repetirlo).
+
+## Rediseño de marca completa: Apple HIG (Sep 2026) — las 4 apps
+Segundo rediseño de la sesión. El primero (arriba) no convenció; se probó también una dirección oscura tipo dashboard/fintech (acento índigo) y el usuario la rechazó por "genérica" — es el patrón de diseño más repetido en interfaces generadas por IA ahora mismo, así que la objeción era acertada. Se pidió explícitamente **usar las Human Interface Guidelines de Apple** y que el resultado no se sintiera genérico. Se validó con un mockup en un canvas de diseño antes de tocar las 4 apps (`https://claude.ai/code/artifact/2756ffe2-5f1c-4834-87c7-f20c5a45b484`), y el usuario dio luz verde ("continua sorpréndeme").
+
+**Decisión de alcance** (confirmada explícitamente por el usuario): reemplaza la paleta en **las 4 apps** — `client`, `provider`, `admin` y el `web` (landing) — no solo las internas.
+
+### Sistema
+- **Tipografía del sistema, no un archivo de fuente**: `-apple-system, BlinkMacSystemFont, "SF Pro Text/Display", "Segoe UI", Roboto, Helvetica, Arial, sans-serif`. En Mac/iPhone esto renderiza San Francisco de verdad; en Windows cae a Segoe UI. Se quitaron los `<link>` a Google Fonts (Space Grotesk/Inter/IBM Plex Mono) de los 4 `index.html` — ya no se cargan archivos de fuente.
+- **Fondo agrupado + tarjetas blancas** (`systemGroupedBackground` #F2F2F7 / `secondarySystemGroupedBackground` blanco), azul del sistema `#007AFF` como único acento de acción, verde/ámbar/rojo semánticos con fondos tintados al 12-14%.
+- **Modo oscuro automático de verdad**: cada `App.css` tiene un bloque `@media (prefers-color-scheme: dark)` con los tokens oscuros de Apple (`#000000` / `#1C1C1E`, azul `#0A84FF`). Verificado en vivo: con el navegador del usuario en modo oscuro del sistema, la app cambió sola sin ningún flag ni prop.
+- **Componentes**: control segmentado (`.segmented`/`.segment`/`.segment-active`, la pastilla blanca con sombra sutil) en vez de pestañas de píldora o subrayado; campos de texto rellenos sin borde (`background: fill quaternary`); botones sin sombra dura ni glow, solo color + opacidad al presionar (`:active { opacity:.75; transform: scale(.985) }`); números con `font-variant-numeric: tabular-nums` en vez de una tipografía monoespaciada aparte; separadores de 0.5px en vez de bordes de 1px.
+- **Se eliminó** todo el lenguaje "ticket/folio" del intento anterior (`.folio-header`, códigos `R-XXXXXX`/`PLAN-XXXXXX`, eyebrows `REGISTRO · CLIENTE`) y el emoji de interfaz (cámara/candado/recibo) — quedó un set de íconos de trazo propio en `components/icons.jsx` (inspirado en SF Symbols, no son símbolos de Apple literales).
+- **`apps/web` (landing)**: se quitó el plano técnico (SVG de casa), las categorías como "ticket" con folio y perforado, y los "stubs" de pasos — ahora es una landing con jerarquía tipográfica grande (headline 50px), tarjetas simples con sombra casi imperceptible, y una tarjeta de vista previa del producto (`.preview-card`) ilustrativa en vez de una foto real.
+- **`apps/admin`**: ya usaba azul (`#1F6FEB`, sin naranja/navy — nunca tuvo el tratamiento "Orden de servicio"), así que fue la conversión más directa; el sidebar de pestañas pasó de píldora activa a fila con relleno azul tenue (como Ajustes/Mail de Apple).
+
+### Verificación
+`yarn build` OK en las 4 apps, **25/25 tests de cliente pasan sin cambios**. Capturas de pantalla en vivo confirmando: (1) el landing con contenido real de la API renderizando el hero/preview-card/categorías; (2) el cliente autenticado con una solicitud real, control segmentado y modo oscuro automático funcionando correctamente.
+
+### Pendiente si se quiere seguir
+- Repaso visual detallado de subpantallas profundas (chat, checkout de Stripe, tabla de reseñas en admin) — heredan el sistema por CSS pero no se retocaron a mano una por una.
+- `apps/provider`: la lógica de negocio (chips de categoría, tabla de niveles, métricas) ya está convertida a tokens HIG pero no se verificó visualmente con captura (sin sesión de proveedor a mano en esta pasada).
 - `ai_quote`: down-scale de imágenes (PIL) antes de enviar a Groq para grandes cargas.
 - Preview: exponer también web/provider/admin (hoy solo cliente; se alterna con `PREVIEW_APP`).
 

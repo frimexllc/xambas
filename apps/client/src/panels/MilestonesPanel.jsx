@@ -57,12 +57,7 @@ export function MilestonesPanel({ session, onError }) {
         {plans.map((plan) => (
           <li key={plan.id} className="match-item" data-testid={`plan-${plan.id}`}>
             <div className="space-between">
-              <div>
-                <span className="mono-label" style={{ display: "block", marginBottom: 3 }}>
-                  PLAN-{plan.id.slice(-6).toUpperCase()}
-                </span>
-                <strong>Trabajo #{plan.request_id.slice(-6)}</strong>
-              </div>
+              <strong>Trabajo #{plan.request_id.slice(-6)}</strong>
               <span className="muted mono">
                 ${plan.released_amount} / ${plan.total_amount} {plan.currency}
               </span>

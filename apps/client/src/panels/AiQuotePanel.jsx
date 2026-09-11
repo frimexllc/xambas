@@ -52,64 +52,58 @@ export function AiQuotePanel({ session, categories, onError }) {
 
   return (
     <div className="grid-2" data-testid="ai-quote-panel">
-      <section className="card folio-card">
-        <div className="folio-header">
-          <span className="mono-label accent">Orden de cotización</span>
-          <span className="folio-code">Cotización IA</span>
-        </div>
-        <div className="folio-body">
-          <h2>Cotización con IA</h2>
-          <p className="muted">
-            Sube fotos del trabajo y nuestra IA estima el alcance y un rango de precio en segundos,
-            antes de contactar a ningún proveedor. Sin sorpresas, sin llamadas de venta.
-          </p>
-          <form onSubmit={handleAnalyze} className="stack" data-testid="ai-quote-form">
-            <label>
-              <span className="field-label">Categoría</span>
-              <select
-                required
-                value={categoryId}
-                onChange={(e) => setCategoryId(e.target.value)}
-                data-testid="ai-quote-category-select"
-              >
-                <option value="">Selecciona una categoría</option>
-                {categories.map((category) => (
-                  <option key={category.id} value={category.id}>
-                    {category.parent_id ? `— ${category.name}` : category.name}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <div>
-              <span className="field-label">Fotos del trabajo</span>
-              <PhotoDropzone
-                files={files}
-                onChange={setFiles}
-                maxFiles={5}
-                accept="image/jpeg,image/png,image/webp"
-                testId="ai-quote-files-input"
-              />
-            </div>
-            <label>
-              <span className="field-label">Notas (opcional)</span>
-              <textarea
-                rows={2}
-                value={notes}
-                onChange={(e) => setNotes(e.target.value)}
-                placeholder="Describe detalles útiles: medidas, materiales, urgencia..."
-                data-testid="ai-quote-notes-input"
-              />
-            </label>
-            <button
-              className="btn btn-primary"
-              type="submit"
-              disabled={analyzing}
-              data-testid="ai-quote-submit-btn"
+      <section className="card">
+        <h2>Cotización con IA</h2>
+        <p className="muted">
+          Sube fotos del trabajo y nuestra IA estima el alcance y un rango de precio en segundos,
+          antes de contactar a ningún proveedor. Sin sorpresas, sin llamadas de venta.
+        </p>
+        <form onSubmit={handleAnalyze} className="stack" data-testid="ai-quote-form">
+          <label>
+            <span className="field-label">Categoría</span>
+            <select
+              required
+              value={categoryId}
+              onChange={(e) => setCategoryId(e.target.value)}
+              data-testid="ai-quote-category-select"
             >
-              {analyzing ? "Analizando fotos con IA..." : "Analizar y estimar precio"}
-            </button>
-          </form>
-        </div>
+              <option value="">Selecciona una categoría</option>
+              {categories.map((category) => (
+                <option key={category.id} value={category.id}>
+                  {category.parent_id ? `— ${category.name}` : category.name}
+                </option>
+              ))}
+            </select>
+          </label>
+          <div>
+            <span className="field-label">Fotos del trabajo</span>
+            <PhotoDropzone
+              files={files}
+              onChange={setFiles}
+              maxFiles={5}
+              accept="image/jpeg,image/png,image/webp"
+              testId="ai-quote-files-input"
+            />
+          </div>
+          <label>
+            <span className="field-label">Notas (opcional)</span>
+            <textarea
+              rows={2}
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              placeholder="Describe detalles útiles: medidas, materiales, urgencia..."
+              data-testid="ai-quote-notes-input"
+            />
+          </label>
+          <button
+            className="btn btn-primary"
+            type="submit"
+            disabled={analyzing}
+            data-testid="ai-quote-submit-btn"
+          >
+            {analyzing ? "Analizando fotos con IA..." : "Analizar y estimar precio"}
+          </button>
+        </form>
       </section>
 
       <section className="card">

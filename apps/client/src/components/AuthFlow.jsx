@@ -90,7 +90,6 @@ export function AuthFlow({ onAuthenticated, onError }) {
   if (step === "otp") {
     return (
       <section className="card auth-card">
-        <span className="mono-label accent auth-kicker">Verificación · OTP</span>
         <h2>Verifica tu telefono</h2>
         <p className="muted">
           Enviamos un codigo por SMS a <strong>{otpState?.target}</strong>.
@@ -125,7 +124,6 @@ export function AuthFlow({ onAuthenticated, onError }) {
   if (mode === "login") {
     return (
       <section className="card auth-card">
-        <span className="mono-label accent auth-kicker">Acceso · Cliente</span>
         <h2>Inicia sesion</h2>
         <p className="muted">Te enviaremos un codigo al telefono de tu cuenta.</p>
         <form onSubmit={handleLogin} className="stack">
@@ -154,7 +152,6 @@ export function AuthFlow({ onAuthenticated, onError }) {
 
   return (
     <section className="card auth-card">
-      <span className="mono-label accent auth-kicker">Registro · Cliente</span>
       <h2>Crea tu cuenta de cliente</h2>
       <p className="muted">Publica lo que necesitas y te conectamos con proveedores verificados.</p>
       <form onSubmit={handleRegister} className="stack">

@@ -15,11 +15,11 @@ const FALLBACK_CONTENT = {
     brand_name: "Xambas",
     tagline: "Encuentra profesionales de confianza para tu hogar",
     logo_url: null,
-    primary_color: "#1b3a5c",
-    secondary_color: "#e8622c",
+    primary_color: "#007aff",
+    secondary_color: "#007aff",
   },
   landing: {
-    hero_title: "Tu casa, con orden de trabajo",
+    hero_title: "Tu hogar, en buenas manos",
     hero_subtitle:
       "Publica lo que necesitas, recibe propuestas de proveedores verificados y paga solo cuando el trabajo esta hecho.",
     hero_image_url: null,
@@ -87,21 +87,21 @@ export default function App() {
             <a className="btn btn-ghost" href={PROVIDER_URL}>
               Soy proveedor
             </a>
-            <a className="btn btn-secondary" href={CLIENT_URL}>
+            <a className="btn btn-primary" href={CLIENT_URL}>
               Publicar solicitud
             </a>
           </nav>
 
           <button className="nav-toggle" onClick={() => setMenuOpen((open) => !open)} aria-label="Menu">
-            ☰
+            <MenuIcon />
           </button>
         </div>
       </header>
 
       <section id="top" className="hero">
         <div>
-          <span className="ticket-tag mono-label">
-            <span className="dot" /> Orden de servicio abierta
+          <span className="eyebrow">
+            <span className="eyebrow-dot" /> Servicio verificado
           </span>
           <h1>{landing.hero_title}</h1>
           <p>{landing.hero_subtitle}</p>
@@ -123,11 +123,33 @@ export default function App() {
           </div>
         </div>
 
-        <div className="house-diagram">
-          <div className="blueprint-frame">
-            <span className="blueprint-corner-label">PLANO · CASA-01</span>
-            <span className="blueprint-corner-label right">ESC 1:50</span>
-            <HouseSchematic />
+        <div className="hero-preview" aria-hidden="true">
+          <div className="preview-card">
+            <div className="preview-row">
+              <span className="preview-dot" />
+              <span className="preview-dot" />
+              <span className="preview-dot" />
+            </div>
+            <div className="preview-title">Cotización con IA</div>
+            <div className="preview-chip-row">
+              <span className="preview-chip active">Plomería</span>
+              <span className="preview-chip">Limpieza</span>
+              <span className="preview-chip">Electricidad</span>
+            </div>
+            <div className="preview-price">
+              <span>Rango estimado</span>
+              <strong>$850–$1,450 MXN</strong>
+            </div>
+            <div className="preview-list">
+              <div className="preview-list-item">
+                <CheckIcon />
+                Revisión y localización de la fuga
+              </div>
+              <div className="preview-list-item">
+                <CheckIcon />
+                Reemplazo de empaques
+              </div>
+            </div>
           </div>
         </div>
       </section>
@@ -135,17 +157,15 @@ export default function App() {
       <section id="como-funciona" className="section">
         <div className="section-head">
           <div>
-            <span className="mono-label" style={{ color: "var(--blueprint-2)" }}>
-              Proceso
-            </span>
+            <span className="eyebrow-label">Proceso</span>
             <h2>Como funciona</h2>
           </div>
           <p className="section-subtitle">Tres pasos, del primer mensaje al trabajo terminado.</p>
         </div>
-        <div className="stub-row">
+        <div className="steps-row">
           {landing.how_it_works.map((step, index) => (
-            <div className="stub" key={index}>
-              <span className="stub-number">N.0{index + 1}</span>
+            <div className="step" key={index}>
+              <span className="step-number">{index + 1}</span>
               <h3>{step.title}</h3>
               <p>{step.description}</p>
             </div>
@@ -156,9 +176,7 @@ export default function App() {
       <section id="categorias" className="section section-muted">
         <div className="section-head">
           <div>
-            <span className="mono-label" style={{ color: "var(--blueprint-2)" }}>
-              Catalogo
-            </span>
+            <span className="eyebrow-label">Catalogo</span>
             <h2>Categorias populares</h2>
           </div>
           <p className="section-subtitle">Publica tu solicitud en la categoria que necesites.</p>
@@ -166,7 +184,6 @@ export default function App() {
         <div className="category-grid">
           {featured.map((category, index) => (
             <a key={category.id} className="category-card" href={CLIENT_URL}>
-              <span className="category-code">N.{String(index + 1).padStart(2, "0")}</span>
               <span className="category-icon">{CATEGORY_ICONS[index % CATEGORY_ICONS.length]}</span>
               <span className="category-name">{category.name}</span>
             </a>
@@ -177,15 +194,13 @@ export default function App() {
 
       <section className="cta">
         <div className="cta-inner">
-          <div>
-            <h2>Listo para abrir tu orden de servicio?</h2>
-            <p>Publica tu solicitud gratis o registra tu negocio para empezar a recibir clientes.</p>
-          </div>
-          <div className="hero-actions">
+          <h2>Listo para empezar?</h2>
+          <p>Publica tu solicitud gratis o registra tu negocio para empezar a recibir clientes.</p>
+          <div className="hero-actions" style={{ justifyContent: "center" }}>
             <a className="btn btn-primary btn-lg" href={CLIENT_URL}>
               Publicar solicitud
             </a>
-            <a className="btn btn-outline btn-lg" href={PROVIDER_URL}>
+            <a className="btn btn-secondary btn-lg" href={PROVIDER_URL}>
               Registrar mi negocio
             </a>
           </div>
@@ -208,8 +223,8 @@ export default function App() {
           </div>
         </div>
         <p className="footer-note">
-          © {new Date().getFullYear()} {brand.brand_name.toUpperCase()} — PANEL DE ADMINISTRACION
-          DISPONIBLE PARA EL EQUIPO INTERNO
+          © {new Date().getFullYear()} {brand.brand_name} — Panel de administracion disponible para el
+          equipo interno
         </p>
       </footer>
     </div>
@@ -218,63 +233,17 @@ export default function App() {
 
 function CheckIcon() {
   return (
-    <svg width="13" height="13" viewBox="0 0 16 16" fill="none">
-      <circle cx="8" cy="8" r="7" stroke="currentColor" strokeWidth="1.4" />
-      <path d="M5 8.2L7 10.2L11 6" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none">
+      <circle cx="12" cy="12" r="9.5" fill="#34c759" />
+      <path d="M8 12.3L10.6 15L16.5 8.8" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
 }
 
-function HouseSchematic() {
+function MenuIcon() {
   return (
-    <svg viewBox="0 0 480 360" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Plano de una casa con puntos de servicio">
-      {/* suelo */}
-      <line x1="40" y1="318" x2="440" y2="318" stroke="rgba(255,255,255,0.35)" strokeWidth="1.5" strokeDasharray="2 4" />
-
-      {/* chimenea */}
-      <rect x="308" y="88" width="20" height="48" stroke="white" strokeWidth="2" />
-
-      {/* techo */}
-      <path d="M96 156L240 62L384 156" stroke="white" strokeWidth="2.5" strokeLinejoin="round" />
-
-      {/* muros */}
-      <rect x="118" y="156" width="244" height="162" stroke="white" strokeWidth="2.5" />
-
-      {/* puerta */}
-      <rect x="216" y="228" width="48" height="90" stroke="white" strokeWidth="2" />
-      <circle cx="253" cy="274" r="2.4" fill="white" />
-
-      {/* ventanas */}
-      <rect x="148" y="200" width="44" height="44" stroke="white" strokeWidth="2" />
-      <line x1="170" y1="200" x2="170" y2="244" stroke="white" strokeWidth="1.4" />
-      <line x1="148" y1="222" x2="192" y2="222" stroke="white" strokeWidth="1.4" />
-
-      <rect x="288" y="200" width="44" height="44" stroke="white" strokeWidth="2" />
-      <line x1="310" y1="200" x2="310" y2="244" stroke="white" strokeWidth="1.4" />
-      <line x1="288" y1="222" x2="332" y2="222" stroke="white" strokeWidth="1.4" />
-
-      {/* cotas */}
-      <line x1="118" y1="332" x2="362" y2="332" stroke="rgba(255,255,255,0.3)" strokeWidth="1" />
-      <text x="240" y="348" fill="rgba(255,255,255,0.55)" fontSize="10" fontFamily="IBM Plex Mono, monospace" textAnchor="middle">
-        7.20 M
-      </text>
-
-      {/* pines numerados de servicio */}
-      <ServicePin x={170} y={222} n="1" lx={170} ly={222} />
-      <ServicePin x={318} y={112} n="2" lx={318} ly={112} />
-      <ServicePin x={253} y={274} n="3" lx={253} ly={274} />
-      <ServicePin x={90} y={300} n="4" lx={90} ly={300} />
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+      <path d="M4 7H20M4 12H20M4 17H20" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
     </svg>
-  );
-}
-
-function ServicePin({ x, y, n }) {
-  return (
-    <g>
-      <circle cx={x} cy={y} r="11" fill="#e8622c" stroke="white" strokeWidth="1.5" />
-      <text x={x} y={y + 4} fill="white" fontSize="11" fontFamily="IBM Plex Mono, monospace" fontWeight="600" textAnchor="middle">
-        {n}
-      </text>
-    </g>
   );
 }

@@ -49,20 +49,14 @@ export function RequestsPanel({ session, categories, onError }) {
 
   return (
     <div className="grid-2">
-      <section className="card folio-card">
-        <div className="folio-header">
-          <span className="mono-label accent">Orden de servicio</span>
-          <span className="folio-code">Nueva solicitud</span>
-        </div>
-        <div className="folio-body">
-          <h2>Nueva solicitud de servicio</h2>
-          <NewRequestForm
-            categories={categories}
-            session={session}
-            onCreated={(requestId) => setSelectedRequestId(requestId)}
-            onError={onError}
-          />
-        </div>
+      <section className="card">
+        <h2>Nueva solicitud de servicio</h2>
+        <NewRequestForm
+          categories={categories}
+          session={session}
+          onCreated={(requestId) => setSelectedRequestId(requestId)}
+          onError={onError}
+        />
       </section>
 
       <section className="card">
@@ -84,9 +78,6 @@ export function RequestsPanel({ session, categories, onError }) {
                 data-testid={`request-item-${request.id}`}
               >
                 <div>
-                  <span className="mono-label" style={{ display: "block", marginBottom: 3 }}>
-                    R-{request.id.slice(-6).toUpperCase()}
-                  </span>
                   <strong>{request.title}</strong>
                   <p className="muted">{request.category_name} · {request.city}</p>
                 </div>
