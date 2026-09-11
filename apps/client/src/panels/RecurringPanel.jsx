@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { api } from "../lib/api.js";
 import { COUNTRY_CODE } from "../constants.js";
+import { EmptyState } from "../components/EmptyState.jsx";
 
 // Servicios recurrentes: suscripciones y visitas programadas.
 
@@ -58,7 +59,11 @@ export function RecurringPanel({ session, categories, onError }) {
         <h2>Tus suscripciones</h2>
         {loading && <p className="muted">Cargando...</p>}
         {!loading && subscriptions.length === 0 && (
-          <p className="muted">Aún no tienes servicios recurrentes.</p>
+          <EmptyState
+            icon="🔁"
+            title="Aún no tienes servicios recurrentes"
+            hint="Programa uno a la izquierda (limpieza semanal, mantenimiento mensual) y generamos cada visita automáticamente."
+          />
         )}
         <ul className="request-list" data-testid="subscription-list">
           {subscriptions.map((subscription) => (

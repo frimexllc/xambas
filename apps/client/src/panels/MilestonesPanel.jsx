@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { api } from "../lib/api.js";
+import { EmptyState } from "../components/EmptyState.jsx";
 
 // Pagos por etapas (hitos): el cliente libera cada fase cuando el proveedor
 // sube evidencia y él la aprueba. El plan se crea desde un trabajo aceptado.
@@ -44,7 +45,13 @@ export function MilestonesPanel({ session, onError }) {
         y tú la apruebas. Crea un plan desde un trabajo aceptado en “Solicitudes”.
       </p>
       {loading && <p className="muted">Cargando...</p>}
-      {!loading && plans.length === 0 && <p className="muted">Aún no tienes planes por etapas.</p>}
+      {!loading && plans.length === 0 && (
+        <EmptyState
+          icon="🧾"
+          title="Aún no tienes planes por etapas"
+          hint="Crea uno desde un trabajo aceptado en la pestaña “Solicitudes” para liberar el pago fase por fase."
+        />
+      )}
       <ul className="request-list" data-testid="milestones-plan-list">
         {plans.map((plan) => (
           <li key={plan.id} className="match-item" data-testid={`plan-${plan.id}`}>

@@ -5,6 +5,7 @@ import { getStripe } from "../lib/stripe.js";
 import { COUNTRY_CODE } from "../constants.js";
 import { StatusBadge } from "../components/StatusBadge.jsx";
 import { ChatPanel } from "../components/ChatPanel.jsx";
+import { EmptyState } from "../components/EmptyState.jsx";
 
 // Pestaña "Solicitudes": alta de solicitud + lista + detalle (matches, chat,
 // pago en custodia, plan por etapas y reseña).
@@ -61,7 +62,11 @@ export function RequestsPanel({ session, categories, onError }) {
         <h2>Tus solicitudes</h2>
         {loading && <p className="muted">Cargando...</p>}
         {!loading && requests.length === 0 && (
-          <p className="muted">Aun no has creado ninguna solicitud.</p>
+          <EmptyState
+            icon="📋"
+            title="Aún no tienes solicitudes"
+            hint="Publica la primera a la izquierda y te conectamos con proveedores verificados en tu zona."
+          />
         )}
         <ul className="request-list">
           {requests.map((request) => (

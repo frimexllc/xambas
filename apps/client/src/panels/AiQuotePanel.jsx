@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import { api } from "../lib/api.js";
 import { COUNTRY_CODE } from "../constants.js";
+import { EmptyState } from "../components/EmptyState.jsx";
+import { PhotoDropzone } from "../components/PhotoDropzone.jsx";
 
 // Cotización con IA: sube fotos y recibe alcance + precio estimado (Groq visión).
 
@@ -72,21 +74,16 @@ export function AiQuotePanel({ session, categories, onError }) {
               ))}
             </select>
           </label>
-          <label>
-            Fotos del trabajo (hasta 5)
-            <input
-              type="file"
+          <div>
+            <span className="field-label">Fotos del trabajo</span>
+            <PhotoDropzone
+              files={files}
+              onChange={setFiles}
+              maxFiles={5}
               accept="image/jpeg,image/png,image/webp"
-              multiple
-              onChange={(e) => setFiles(Array.from(e.target.files).slice(0, 5))}
-              data-testid="ai-quote-files-input"
+              testId="ai-quote-files-input"
             />
-          </label>
-          {files.length > 0 && (
-            <p className="muted" data-testid="ai-quote-files-count">
-              {files.length} foto(s) seleccionada(s)
-            </p>
-          )}
+          </div>
           <label>
             Notas (opcional)
             <textarea
@@ -115,7 +112,11 @@ export function AiQuotePanel({ session, categories, onError }) {
           <>
             <h2>Tus cotizaciones</h2>
             {history.length === 0 && (
-              <p className="muted">Aún no has generado cotizaciones con IA.</p>
+              <EmptyState
+                icon="📸"
+                title="Aún no has generado cotizaciones"
+                hint="Sube fotos del trabajo a la izquierda y recibe un alcance y precio estimado en segundos."
+              />
             )}
             <ul className="request-list" data-testid="ai-quote-history">
               {history.map((item) => (
