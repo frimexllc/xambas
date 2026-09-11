@@ -3,6 +3,7 @@ import { setAuthToken } from "./lib/api.js";
 import { clearSession, loadSession, saveSession } from "./lib/session.js";
 import { AuthFlow } from "./components/AuthFlow.jsx";
 import { ClientHome } from "./panels/ClientHome.jsx";
+import ThemeToggle from "./components/ThemeToggle.jsx";
 import "./App.css";
 
 // Rehidrata el token Bearer antes del primer render para que las llamadas
@@ -36,11 +37,14 @@ export default function App() {
             <p>Encuentra profesionales de confianza para tu hogar</p>
           </div>
         </div>
-        {session && (
-          <button className="btn btn-ghost" onClick={handleLogout}>
-            Cerrar sesion
-          </button>
-        )}
+        <div className="header-right">
+          <ThemeToggle />
+          {session && (
+            <button className="btn btn-ghost" onClick={handleLogout}>
+              Cerrar sesion
+            </button>
+          )}
+        </div>
       </header>
 
       {error && (

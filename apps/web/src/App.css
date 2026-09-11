@@ -27,6 +27,42 @@
     Arial, sans-serif;
 }
 
+@media (prefers-color-scheme: dark) {
+  /* :not([data-theme="light"]) deja que una elección explícita de tema
+     claro (ThemeToggle) gane sobre el modo oscuro del sistema. */
+  :root:not([data-theme="light"]) {
+    --paper: #1a1512;
+    --paper-raised: #262019;
+    --ink: rgba(255, 246, 240, 0.94);
+    --ink-soft: rgba(255, 230, 210, 0.62);
+    --ink-tertiary: rgba(255, 230, 210, 0.32);
+    --line: rgba(255, 220, 190, 0.16);
+    --accent: #ff8b63;
+    --accent-dark: #ffa37e;
+    --accent-tint: rgba(255, 139, 99, 0.18);
+    --verified: #4cc17e;
+    --verified-tint: rgba(76, 193, 126, 0.18);
+    --fill: rgba(255, 214, 184, 0.1);
+  }
+}
+
+/* Elección explícita de tema oscuro (ThemeToggle), independiente del
+   sistema — misma paleta que el bloque de arriba. */
+:root[data-theme="dark"] {
+  --paper: #1a1512;
+  --paper-raised: #262019;
+  --ink: rgba(255, 246, 240, 0.94);
+  --ink-soft: rgba(255, 230, 210, 0.62);
+  --ink-tertiary: rgba(255, 230, 210, 0.32);
+  --line: rgba(255, 220, 190, 0.16);
+  --accent: #ff8b63;
+  --accent-dark: #ffa37e;
+  --accent-tint: rgba(255, 139, 99, 0.18);
+  --verified: #4cc17e;
+  --verified-tint: rgba(76, 193, 126, 0.18);
+  --fill: rgba(255, 214, 184, 0.1);
+}
+
 * {
   box-sizing: border-box;
   -webkit-font-smoothing: antialiased;
@@ -152,6 +188,12 @@ a {
   color: var(--ink);
 }
 
+.nav-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .nav-toggle {
   display: none;
   background: none;
@@ -163,6 +205,28 @@ a {
   color: var(--ink);
   align-items: center;
   justify-content: center;
+}
+
+.theme-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border: none;
+  border-radius: 999px;
+  background: var(--fill);
+  color: var(--ink);
+  cursor: pointer;
+  transition: background-color 0.15s ease, transform 0.08s ease;
+}
+
+.theme-toggle:hover {
+  background: color-mix(in srgb, var(--fill) 70%, var(--ink) 8%);
+}
+
+.theme-toggle:active {
+  transform: scale(0.9);
 }
 
 @media (max-width: 860px) {

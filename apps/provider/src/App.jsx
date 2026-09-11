@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { api, setAuthToken } from "./lib/api.js";
 import { clearSession, loadSession, saveSession } from "./lib/session.js";
+import ThemeToggle from "./components/ThemeToggle.jsx";
 import "./App.css";
 
 // Rehidrata el token Bearer antes del primer render para que las llamadas
@@ -34,11 +35,14 @@ export default function App() {
             <p>Recibe y gestiona tus oportunidades de trabajo</p>
           </div>
         </div>
-        {session && (
-          <button className="btn btn-ghost" onClick={handleLogout}>
-            Cerrar sesion
-          </button>
-        )}
+        <div className="header-right">
+          <ThemeToggle />
+          {session && (
+            <button className="btn btn-ghost" onClick={handleLogout}>
+              Cerrar sesion
+            </button>
+          )}
+        </div>
       </header>
 
       {error && (

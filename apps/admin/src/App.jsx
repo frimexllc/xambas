@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { api, setAuthToken } from "./lib/api.js";
 import { clearSession, loadSession, saveSession } from "./lib/session.js";
+import ThemeToggle from "./components/ThemeToggle.jsx";
 import "./App.css";
 
 const TABS = [
@@ -43,16 +44,19 @@ export default function App() {
             <p>Panel de administracion</p>
           </div>
         </div>
-        {session && (
-          <div className="header-right">
-            <span className="muted">
-              {session.name} · {session.role}
-            </span>
-            <button className="btn btn-ghost" onClick={handleLogout}>
-              Cerrar sesion
-            </button>
-          </div>
-        )}
+        <div className="header-right">
+          <ThemeToggle />
+          {session && (
+            <>
+              <span className="muted">
+                {session.name} · {session.role}
+              </span>
+              <button className="btn btn-ghost" onClick={handleLogout}>
+                Cerrar sesion
+              </button>
+            </>
+          )}
+        </div>
       </header>
 
       {error && (

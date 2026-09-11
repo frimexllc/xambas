@@ -35,7 +35,9 @@
 }
 
 @media (prefers-color-scheme: dark) {
-  :root {
+  /* :not([data-theme="light"]) deja que una elección explícita de tema
+     claro (ThemeToggle) gane sobre el modo oscuro del sistema. */
+  :root:not([data-theme="light"]) {
     --bg: #1a1512;
     --surface: #262019;
     --surface-2: rgba(255, 214, 184, 0.1);
@@ -56,6 +58,30 @@
     --info-bg: rgba(111, 179, 224, 0.18);
     --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.5);
   }
+}
+
+/* Elección explícita de tema oscuro (ThemeToggle), independiente del
+   sistema — misma paleta que el bloque de arriba. */
+:root[data-theme="dark"] {
+  --bg: #1a1512;
+  --surface: #262019;
+  --surface-2: rgba(255, 214, 184, 0.1);
+  --text: rgba(255, 246, 240, 0.94);
+  --muted: rgba(255, 230, 210, 0.62);
+  --tertiary: rgba(255, 230, 210, 0.32);
+  --border: rgba(255, 220, 190, 0.16);
+  --primary: #ff8b63;
+  --primary-dark: #ffa37e;
+  --primary-tint: rgba(255, 139, 99, 0.18);
+  --success: #4cc17e;
+  --success-bg: rgba(76, 193, 126, 0.18);
+  --warning: #f0a63e;
+  --warning-bg: rgba(240, 166, 62, 0.18);
+  --danger: #ff5c72;
+  --danger-bg: rgba(255, 92, 114, 0.18);
+  --info: #6fb3e0;
+  --info-bg: rgba(111, 179, 224, 0.18);
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.5);
 }
 
 h1, h2, h3, .brand-name {
@@ -130,6 +156,34 @@ body {
   margin: 0;
   font-size: 12.5px;
   color: var(--muted);
+}
+
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.theme-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border: none;
+  border-radius: 999px;
+  background: var(--surface-2);
+  color: var(--text);
+  cursor: pointer;
+  transition: background-color 0.15s ease, transform 0.08s ease;
+}
+
+.theme-toggle:hover {
+  background: color-mix(in srgb, var(--surface-2) 70%, var(--text) 8%);
+}
+
+.theme-toggle:active {
+  transform: scale(0.9);
 }
 
 .app-main {

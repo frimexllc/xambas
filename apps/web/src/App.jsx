@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { api, CLIENT_URL, PROVIDER_URL } from "./lib/api.js";
+import ThemeToggle from "./components/ThemeToggle.jsx";
 import "./App.css";
 
 const CATEGORY_ICONS = ["🔧", "💡", "🚰", "🧹", "🌿", "🎨", "🔩", "🛠️", "🪛", "🧰"];
@@ -92,9 +93,12 @@ export default function App() {
             </a>
           </nav>
 
-          <button className="nav-toggle" onClick={() => setMenuOpen((open) => !open)} aria-label="Menu">
-            <MenuIcon />
-          </button>
+          <div className="nav-actions">
+            <ThemeToggle />
+            <button className="nav-toggle" onClick={() => setMenuOpen((open) => !open)} aria-label="Menu">
+              <MenuIcon />
+            </button>
+          </div>
         </div>
       </header>
 

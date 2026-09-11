@@ -127,5 +127,22 @@ Se implementó primero solo en `apps/client` como cheque de bajo costo antes de 
 ### Lección de proceso (para no repetir)
 Cuando el alcance decidido es "las 4 apps", verificar con una captura de **cada** app (o al menos landing + una interna) antes de reportar terminado — hacer el cheque de bajo costo en una sola app y dar por hecho que el resto ya heredó el cambio fue lo que produjo el bug que el usuario tuvo que señalar.
 
+## Selector de tema manual (Sep 2026) — las 4 apps
+Al ver la paleta cálida en modo oscuro (su sistema está en oscuro), el usuario pidió explícitamente exponer un selector manual de tema ("quizás dejar los dos temas para poder hacer el cambio entre temas") además de aplicar la paleta cálida de forma consistente. Hasta este punto el modo oscuro solo se activaba automáticamente vía `prefers-color-scheme`, sin forma de forzarlo desde la UI.
+
+### Implementación
+- `src/theme.js` (uno por app, mismo contenido en las 4): `getStoredTheme`/`getSystemTheme` leen `localStorage["xambas-theme"]` y `matchMedia`; `setTheme`/`applyTheme` escriben el atributo `data-theme="light"|"dark"` en `<html>`; `initTheme()` se llama en `main.jsx` antes de montar React.
+- Script inline en cada `index.html` (antes de que cargue nada más) que aplica `data-theme` desde `localStorage` de forma síncrona, para evitar un flash del tema equivocado en la primera pintura.
+- `components/ThemeToggle.jsx` (uno por app): botón circular con ícono de sol/luna que alterna el tema y persiste la elección. Mientras no haya elección explícita, sigue el cambio de `prefers-color-scheme` del sistema en vivo.
+- **Patrón CSS para que la elección explícita gane sobre el sistema**: el bloque `@media (prefers-color-scheme: dark)` pasa de `:root { ... }` a `:root:not([data-theme="light"]) { ... }`, y se agrega un bloque nuevo `:root[data-theme="dark"] { ... }` (mismos tokens, duplicados porque son hojas de estilo planas sin preprocesador). Así: sin elección → sigue al sistema; `data-theme="light"` fuerza claro aunque el sistema esté en oscuro; `data-theme="dark"` fuerza oscuro aunque el sistema esté en claro.
+- `apps/web` (landing) no tenía modo oscuro en absoluto — se le creó un bloque de tokens oscuros (equivalentes cálidos a los de las otras 3 apps, mapeando `--paper`/`--ink`/`--accent`/etc.) además del toggle, para que el selector tenga algo que alternar.
+- El botón vive en el header de cada app (`header-right` en client/provider/admin, `nav-actions` nuevo en web junto al menú hamburguesa), visible incluso antes de iniciar sesión.
+
+### Verificación
+`yarn build` OK en las 4 apps, 25/25 tests de cliente sin cambios. Verificado en vivo en `apps/admin`: el botón alterna correctamente entre el tema oscuro cálido y el tema claro cálido, con el ícono cambiando de luna a sol y el tooltip actualizándose ("Modo oscuro" / "Modo claro").
+
+### Nota de herramienta (para no repetir)
+Al tomar capturas de pantalla con PowerShell (`System.Drawing`/`CopyFromScreen`) en esta máquina, **siempre llamar primero a `user32.dll!SetProcessDPIAware()`** (vía un tipo C# inline). Sin eso, `Screen.PrimaryScreen.Bounds` y la captura devuelven la resolución virtualizada por Windows (en esta máquina 1536×864) en vez de la resolución física real (1920×1080), recortando silenciosamente el borde derecho de la pantalla — cualquier elemento de UI anclado a la derecha (como este selector de tema) parece no existir aunque el código esté perfectamente correcto. Cada invocación de PowerShell es un proceso nuevo, así que hay que llamar `SetProcessDPIAware()` en cada script de captura, no solo una vez por sesión.
+
 ## Notas de negocio (posicionamiento vs competencia)
 Comisión escalonada por nivel ya modelada (`billing/tiers.py`). Servicios recurrentes refuerzan retención/lealtad (menor incentivo de fuga), alineado con la tesis del estudio.
