@@ -109,5 +109,23 @@ Segundo rediseño de la sesión. El primero (arriba) no convenció; se probó ta
 - `ai_quote`: down-scale de imágenes (PIL) antes de enviar a Groq para grandes cargas.
 - Preview: exponer también web/provider/admin (hoy solo cliente; se alterna con `PREVIEW_APP`).
 
+## HIG con carácter: acento cálido + Space Grotesk (Sep 2026) — las 4 apps
+Tercer rediseño de la sesión. El HIG puro de arriba (azul `#007AFF`, sin tipografía de marca) no convenció del todo: encuestado explícitamente, el usuario señaló "se siente frío / sin personalidad" — el problema no era la mecánica (segmented control, fondo agrupado, modo oscuro automático), sino la ejecución genérica de Apple. Petición: mantener el HIG como base estructural pero darle calidez y personalidad de marca, en **las 4 apps** (decisión de alcance repetida: "Todo, marca completa desde cero").
+
+### Cambios sobre el HIG puro
+- **Acento cálido propio**: `#FF6B47` (coral), deliberadamente distinto tanto del azul de Apple como del naranja de marca ya descartado (`#E8622C`, del intento "Orden de trabajo"). Reemplaza `--primary`/`--accent` en los 4 `App.css`, en modo claro y oscuro (`#FF8B63` en oscuro).
+- **Neutros con temperatura cálida** en vez de gris frío: fondo `#F7F2EE` (vs. `#F2F2F7` de Apple), texto `#241C16` con opacidades cálidas en vez de negro/blanco puro con opacidad neutra.
+- **Space Grotesk solo en titulares** (`h1,h2,h3,.brand-name` y los números grandes tipo `.quote-price`/`.reputation-score`/`.commission-pct`/`.metric-value`, vía variable `--font-headline: "Space Grotesk", var(--font-display)`), el resto del texto y controles se quedan en la tipografía del sistema — es la única fuente de Google Fonts que se volvió a cargar, con pesos 600/700 nada más.
+- Se mantiene todo lo demás del HIG: segmented control, campos rellenos, `tabular-nums`, separadores de 0.5px, modo oscuro automático.
+
+### Bug de rollout detectado por el usuario
+Se implementó primero solo en `apps/client` como cheque de bajo costo antes de tocar las otras 3 apps (lección de la ronda anterior: no repetir cambios de alcance completo sin verificar primero). El usuario mandó una captura de la landing (`apps/web`) mostrando que seguía en el azul frío del HIG puro — **"pero la landing no se ve bonita"**. Corregido: se sincronizó la paleta cálida + Space Grotesk en `apps/web`, `apps/provider` y `apps/admin`. En `apps/web` además se recalentaron las sombras que estaban hardcodeadas en negro (`rgba(0,0,0,...)` → tintes cálidos/coral) y se añadió un glow radial cálido detrás del hero (`.hero::before`) para dar más riqueza visual a la landing, ya que es la página de marketing y tiene más margen para tratamiento decorativo que las apps internas.
+
+### Verificación
+`yarn build` OK en las 4 apps, **25/25 tests de cliente pasan sin cambios**. Captura de pantalla en vivo de la landing (`localhost:5176`, verificado con curl directo al dev server para evitar el caché del Simple Browser de VS Code) confirmando el hero con headline en Space Grotesk, CTA coral, pill "Servicio verificado" y el glow cálido detrás de la tarjeta de vista previa.
+
+### Lección de proceso (para no repetir)
+Cuando el alcance decidido es "las 4 apps", verificar con una captura de **cada** app (o al menos landing + una interna) antes de reportar terminado — hacer el cheque de bajo costo en una sola app y dar por hecho que el resto ya heredó el cambio fue lo que produjo el bug que el usuario tuvo que señalar.
+
 ## Notas de negocio (posicionamiento vs competencia)
 Comisión escalonada por nivel ya modelada (`billing/tiers.py`). Servicios recurrentes refuerzan retención/lealtad (menor incentivo de fuga), alineado con la tesis del estudio.

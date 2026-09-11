@@ -1,27 +1,28 @@
 /* =====================================================================
-   Xambas — Landing (Apple Human Interface Guidelines)
-   Tipografía del sistema, mucho blanco, azul del sistema como único
-   acento, tarjetas simples con sombra casi imperceptible. Sin plano
-   técnico ni tickets — el mismo lenguaje visual que las apps internas.
+   Xambas — Landing (HIG con carácter)
+   Misma mecánica que las apps internas: tipografía del sistema en cuerpo
+   y controles, Space Grotesk en titulares, acento cálido propio (no el
+   azul de Apple, no el naranja del intento anterior) y neutros con
+   temperatura cálida en vez de gris frío.
    ===================================================================== */
 
 :root {
-  --paper: #ffffff;
-  --paper-raised: #f2f2f7;
-  --ink: rgba(0, 0, 0, 0.88);
-  --ink-soft: rgba(60, 60, 67, 0.6);
-  --ink-tertiary: rgba(60, 60, 67, 0.3);
-  --line: rgba(60, 60, 67, 0.15);
-  --accent: #007aff;
-  --accent-dark: #0066d6;
-  --accent-tint: rgba(0, 122, 255, 0.1);
-  --verified: #1f8a3d;
-  --verified-tint: rgba(52, 199, 89, 0.12);
-  --fill: rgba(118, 118, 128, 0.12);
+  --paper: #fffdfb;
+  --paper-raised: #f7f2ee;
+  --ink: #241c16;
+  --ink-soft: rgba(60, 47, 37, 0.62);
+  --ink-tertiary: rgba(60, 47, 37, 0.32);
+  --line: rgba(60, 47, 37, 0.14);
+  --accent: #ff6b47;
+  --accent-dark: #e8532f;
+  --accent-tint: rgba(255, 107, 71, 0.12);
+  --verified: #2e9e5b;
+  --verified-tint: rgba(46, 158, 91, 0.13);
+  --fill: rgba(120, 95, 70, 0.09);
   --radius-card: 16px;
 
-  --font-display: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto,
-    Helvetica, Arial, sans-serif;
+  --font-display: "Space Grotesk", -apple-system, BlinkMacSystemFont, "SF Pro Display",
+    "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   --font-body: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, Helvetica,
     Arial, sans-serif;
 }
@@ -253,6 +254,18 @@ a {
   align-items: center;
 }
 
+.hero::before {
+  content: "";
+  position: absolute;
+  top: -140px;
+  right: -120px;
+  width: 620px;
+  height: 620px;
+  background: radial-gradient(circle, rgba(255, 107, 71, 0.16) 0%, rgba(255, 107, 71, 0) 68%);
+  z-index: -1;
+  pointer-events: none;
+}
+
 .eyebrow {
   display: inline-flex;
   align-items: center;
@@ -337,7 +350,7 @@ a {
   background: var(--paper);
   border-radius: 22px;
   padding: 22px;
-  box-shadow: 0 24px 60px -20px rgba(0, 0, 0, 0.18), 0 2px 8px rgba(0, 0, 0, 0.04);
+  box-shadow: 0 24px 60px -20px rgba(255, 107, 71, 0.22), 0 2px 8px rgba(36, 28, 22, 0.05);
   display: flex;
   flex-direction: column;
   gap: 16px;
@@ -526,13 +539,13 @@ a {
   display: flex;
   flex-direction: column;
   gap: 10px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  box-shadow: 0 1px 3px rgba(36, 28, 22, 0.05);
   transition: transform 0.15s ease, box-shadow 0.15s ease;
 }
 
 .category-card:hover {
   transform: translateY(-2px);
-  box-shadow: 0 10px 24px -8px rgba(0, 0, 0, 0.14);
+  box-shadow: 0 10px 24px -8px rgba(36, 28, 22, 0.16);
 }
 
 .category-icon {

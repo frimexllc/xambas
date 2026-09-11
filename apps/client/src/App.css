@@ -1,68 +1,70 @@
 /* =====================================================================
-   Xambas Cliente — Apple Human Interface Guidelines
-   Tipografía del sistema (San Francisco vía -apple-system; sin cargar
-   ningún archivo de fuente), fondo agrupado con tarjetas blancas, azul
-   del sistema como único acento de acción, campos rellenos sin borde,
-   sombras casi imperceptibles, separadores de 0.5px. Soporta modo
-   oscuro automático vía prefers-color-scheme.
+   Xambas Cliente — HIG con carácter
+   Misma mecánica de Apple (control segmentado, campos rellenos, modo
+   oscuro automático, tipografía del sistema en controles) pero con
+   identidad propia: acento cálido (no el azul de sistema ni el naranja
+   del intento anterior), neutros con temperatura cálida en vez de gris
+   frío, y Space Grotesk reservado para títulos y números grandes —
+   los controles siguen en la fuente del sistema para sentirse nativos.
    ===================================================================== */
 
 :root {
-  --bg: #f2f2f7; /* systemGroupedBackground */
-  --surface: #ffffff; /* secondarySystemGroupedBackground */
-  --surface-2: rgba(118, 118, 128, 0.12); /* fill quaternary — campos rellenos */
-  --text: rgba(0, 0, 0, 0.88); /* label */
-  --muted: rgba(60, 60, 67, 0.6); /* secondaryLabel */
-  --tertiary: rgba(60, 60, 67, 0.3); /* tertiaryLabel */
-  --border: rgba(60, 60, 67, 0.15); /* separator */
-  --blueprint: #007aff; /* systemBlue — se conserva el nombre de variable por compatibilidad */
-  --primary: #007aff;
-  --primary-dark: #0066d6;
-  --primary-tint: rgba(0, 122, 255, 0.1);
-  --success: #1f8a3d;
-  --success-bg: rgba(52, 199, 89, 0.14);
-  --warning: #a15c00;
-  --warning-bg: rgba(255, 149, 0, 0.14);
-  --danger: #d70015;
-  --danger-bg: rgba(255, 59, 48, 0.12);
-  --info: #007aff;
-  --info-bg: rgba(0, 122, 255, 0.1);
+  --bg: #f7f2ee; /* gris cálido, no el gris azulado de Apple */
+  --surface: #ffffff;
+  --surface-2: rgba(120, 95, 70, 0.09); /* relleno cálido para campos */
+  --text: #241c16; /* casi negro con temperatura cálida */
+  --muted: rgba(60, 47, 37, 0.62);
+  --tertiary: rgba(60, 47, 37, 0.32);
+  --border: rgba(60, 47, 37, 0.14);
+  --blueprint: #ff6b47; /* alias histórico, ver --primary */
+  --primary: #ff6b47; /* acento cálido propio */
+  --primary-dark: #e8532f;
+  --primary-tint: rgba(255, 107, 71, 0.12);
+  --success: #2e9e5b;
+  --success-bg: rgba(46, 158, 91, 0.14);
+  --warning: #b8720a;
+  --warning-bg: rgba(184, 114, 10, 0.14);
+  --danger: #d7263d;
+  --danger-bg: rgba(215, 38, 61, 0.12);
+  --info: #3a7ca8;
+  --info-bg: rgba(58, 124, 168, 0.12);
   --radius: 14px;
   --radius-sm: 10px;
-  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.04);
-  --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.1);
+  --shadow-sm: 0 1px 3px rgba(36, 28, 22, 0.05);
+  --shadow-md: 0 8px 24px rgba(36, 28, 22, 0.12);
   --font-display: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, Helvetica,
     Arial, sans-serif;
+  --font-headline: "Space Grotesk", var(--font-display);
   --font-mono: ui-monospace, "SF Mono", "IBM Plex Mono", monospace;
   font-family: var(--font-display);
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --bg: #000000;
-    --surface: #1c1c1e;
-    --surface-2: rgba(118, 118, 128, 0.24);
-    --text: rgba(255, 255, 255, 0.92);
-    --muted: rgba(235, 235, 245, 0.6);
-    --tertiary: rgba(235, 235, 245, 0.3);
-    --border: rgba(84, 84, 88, 0.6);
-    --primary: #0a84ff;
-    --primary-dark: #409cff;
-    --primary-tint: rgba(10, 132, 255, 0.16);
-    --success: #32d74b;
-    --success-bg: rgba(50, 215, 75, 0.16);
-    --warning: #ff9f0a;
-    --warning-bg: rgba(255, 159, 10, 0.16);
-    --danger: #ff453a;
-    --danger-bg: rgba(255, 69, 58, 0.16);
-    --info: #0a84ff;
-    --info-bg: rgba(10, 132, 255, 0.16);
+    --bg: #1a1512;
+    --surface: #262019;
+    --surface-2: rgba(255, 214, 184, 0.1);
+    --text: rgba(255, 246, 240, 0.94);
+    --muted: rgba(255, 230, 210, 0.62);
+    --tertiary: rgba(255, 230, 210, 0.32);
+    --border: rgba(255, 220, 190, 0.16);
+    --primary: #ff8b63;
+    --primary-dark: #ffa37e;
+    --primary-tint: rgba(255, 139, 99, 0.18);
+    --success: #4cc17e;
+    --success-bg: rgba(76, 193, 126, 0.18);
+    --warning: #f0a63e;
+    --warning-bg: rgba(240, 166, 62, 0.18);
+    --danger: #ff5c72;
+    --danger-bg: rgba(255, 92, 114, 0.18);
+    --info: #6fb3e0;
+    --info-bg: rgba(111, 179, 224, 0.18);
     --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.5);
   }
 }
 
 h1, h2, h3, .brand-name {
-  font-family: var(--font-display);
+  font-family: var(--font-headline);
   letter-spacing: -0.02em;
   font-weight: 700;
 }
@@ -594,7 +596,7 @@ textarea:focus {
 }
 
 .quote-price {
-  font-family: var(--font-display);
+  font-family: var(--font-headline);
   font-size: 32px;
   font-weight: 700;
   color: var(--text);
