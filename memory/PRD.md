@@ -72,6 +72,17 @@ El usuario pidió invertir en UX/UI; eligió alcance "solo cliente primero" e in
 - **Micro-interacciones**: sombra sutil en `.card`, elevación al hover en `.request-item` y en `.btn-primary`, transiciones consistentes.
 - Tests: `PhotoDropzone.test.jsx` (5, cubre input/drag-drop/maxFiles/quitar). Polyfill de `URL.createObjectURL` en `test/setup.js` (jsdom no lo trae). Frontend cliente: 25 passed.
 - Pendiente si se quiere seguir: mismo pulido en `apps/provider`; luego, si se decide, la opción de "identidad visual completa" (tickets con folio, plano técnico) que se dejó de lado esta vez.
+
+## Rediseño completo de `apps/client` (Sep 2026) — "Orden de trabajo, refinado"
+El pulido conservador no convenció ("no me gusta, quiero algo más elegante"). Se armaron 3 direcciones visuales completas (mockups reales, no descripciones) en un canvas de diseño para elegir entre ellas; el usuario pidió avanzar directo a un rediseño completo sin genericidad. Se ejecutó una evolución de la dirección **A "Orden de trabajo, refinado"** (la más fiel a la marca real del landing y la más sostenible para una app de uso diario), con el sello de confianza de la dirección C usado con moderación en pagos.
+
+Fuente real usada (no inventada): `apps/web/src/App.css` y `App.jsx` — paleta, tipografía y componentes (`.stub-number`, `.category-card`, `.btn-primary` con sombra dura, `.blueprint-frame` con grid) ya validados en el landing.
+
+- **`App.css` reescrito por completo**: radios de 8-10px → 3-4px, bordes finos en vez de cajas grises, botón primario con la sombra dura `3px 3px 0 var(--primary-shadow)` (idéntica a la del landing), pestañas como ficha de orden (mono, subrayado de acento) en vez de píldora flotante, badges tipo estampa (mono, `--radius-sm`, sin forma de píldora) en vez de chips redondos, `.folio-header`/`.folio-card` (encabezado tipo ticket con folio) reutilizable, `.readout-panel` (panel técnico con grid sutil de fondo, para precios/estimaciones), `.mono-label`/`.field-label` para toda etiqueta de campo.
+- **Set de íconos de trazo nuevo** (`components/icons.jsx`): Clipboard, Repeat, Camera, Receipt, Check, Seal, Lock — reemplaza todo el emoji de la interfaz de trabajo (📋🔁📸🧾✅🔒🔓📷). La marca sigue usando emoji en el landing para categorías (precedente existente); la app de trabajo usa trazo técnico consistente.
+- Aplicado en **las 4 pestañas** + autenticación: folio header en las tarjetas de alta (nueva solicitud, nueva suscripción, cotización IA), panel técnico con grid para el rango de precio estimado, checklist con ícono de check para el alcance, sello de confianza al liberar un pago, códigos de folio mono en listas (solicitudes, planes por etapas).
+- Verificado: `yarn build:client` OK, **25/25 tests pasan** sin cambios (la reescritura de estilos no tocó comportamiento), capturas de pantalla del formulario de registro/login confirmando el render.
+- Pendiente si se quiere seguir: el mismo tratamiento en `apps/provider` (hoy solo tiene el pulido conservador del pase anterior); revisión visual del resto de subpantallas (chat, detalle de solicitud con matches) que heredan el sistema por CSS pero no se retocaron a mano una por una.
 - `ai_quote`: down-scale de imágenes (PIL) antes de enviar a Groq para grandes cargas.
 - Preview: exponer también web/provider/admin (hoy solo cliente; se alterna con `PREVIEW_APP`).
 

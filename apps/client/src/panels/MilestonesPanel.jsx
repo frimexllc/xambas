@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { api } from "../lib/api.js";
 import { EmptyState } from "../components/EmptyState.jsx";
+import { ReceiptIcon } from "../components/icons.jsx";
 
 // Pagos por etapas (hitos): el cliente libera cada fase cuando el proveedor
 // sube evidencia y él la aprueba. El plan se crea desde un trabajo aceptado.
@@ -42,30 +43,37 @@ export function MilestonesPanel({ session, onError }) {
       <h2>Pagos por etapas</h2>
       <p className="muted">
         Para trabajos grandes: liberas el pago fase por fase, solo cuando el proveedor sube evidencia
-        y tú la apruebas. Crea un plan desde un trabajo aceptado en “Solicitudes”.
+        y tú la apruebas. Crea un plan desde un trabajo aceptado en "Solicitudes".
       </p>
       {loading && <p className="muted">Cargando...</p>}
       {!loading && plans.length === 0 && (
         <EmptyState
-          icon="🧾"
+          icon={<ReceiptIcon />}
           title="Aún no tienes planes por etapas"
-          hint="Crea uno desde un trabajo aceptado en la pestaña “Solicitudes” para liberar el pago fase por fase."
+          hint="Crea uno desde un trabajo aceptado en la pestaña Solicitudes para liberar el pago fase por fase."
         />
       )}
       <ul className="request-list" data-testid="milestones-plan-list">
         {plans.map((plan) => (
           <li key={plan.id} className="match-item" data-testid={`plan-${plan.id}`}>
             <div className="space-between">
-              <strong>Trabajo #{plan.request_id.slice(-6)}</strong>
-              <span className="muted">
-                Liberado ${plan.released_amount} / ${plan.total_amount} {plan.currency}
+              <div>
+                <span className="mono-label" style={{ display: "block", marginBottom: 3 }}>
+                  PLAN-{plan.id.slice(-6).toUpperCase()}
+                </span>
+                <strong>Trabajo #{plan.request_id.slice(-6)}</strong>
+              </div>
+              <span className="muted mono">
+                ${plan.released_amount} / ${plan.total_amount} {plan.currency}
               </span>
             </div>
             <ul className="milestone-list">
               {plan.milestones.map((milestone) => (
                 <li key={milestone.id} className="milestone-row">
                   <div className="space-between">
-                    <span>{milestone.title} · <strong>${milestone.amount}</strong></span>
+                    <span>
+                      {milestone.title} · <strong className="mono">${milestone.amount}</strong>
+                    </span>
                     <span className={`badge badge-${milestone.status}`}>
                       {MS_STATUS_LABELS[milestone.status]}
                     </span>
@@ -73,7 +81,9 @@ export function MilestonesPanel({ session, onError }) {
                   {milestone.evidence.length > 0 && (
                     <div className="quote-thumbs">
                       {milestone.evidence.map((ev) => (
-                        <img key={ev.path} src={ev.url} alt="evidencia" className="quote-thumb" />
+                        <div key={ev.path} className="quote-thumb-frame">
+                          <img src={ev.url} alt="evidencia" className="quote-thumb" />
+                        </div>
                       ))}
                     </div>
                   )}

@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { api } from "../lib/api.js";
+import { LockIcon } from "./icons.jsx";
 
 export function ChatPanel({ matchId, senderId, senderRole, onClose, onError }) {
   const [threadId, setThreadId] = useState(null);
@@ -50,9 +51,10 @@ export function ChatPanel({ matchId, senderId, senderRole, onClose, onError }) {
         </button>
       </div>
       <p className={contactUnlocked ? "chat-lock unlocked" : "chat-lock"}>
+        <LockIcon open={contactUnlocked} />
         {contactUnlocked
-          ? "🔓 Contacto desbloqueado: ya pueden compartir telefono, correo o direccion."
-          : "🔒 Protegemos tu privacidad: telefono, correo y redes se ocultan hasta aceptar el trabajo."}
+          ? " Contacto desbloqueado: ya pueden compartir telefono, correo o direccion."
+          : " Protegemos tu privacidad: telefono, correo y redes se ocultan hasta aceptar el trabajo."}
       </p>
       {loading && <p className="muted">Cargando mensajes...</p>}
       <ul className="message-list">

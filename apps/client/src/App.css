@@ -1,22 +1,39 @@
+/* =====================================================================
+   Xambas Cliente — "Orden de trabajo, refinado"
+   Extiende el sistema de diseño del landing (apps/web) a la app de uso
+   diario: mismo plano tecnico y ticket de trabajo como lenguaje visual,
+   pero mas callado — pensado para verse cien veces, no para convertir
+   una vez. Nada de tarjetas blancas genericas ni pildoras sin caracter.
+   ===================================================================== */
+
 :root {
   --bg: #eef0f2;
   --surface: #ffffff;
-  --border: rgba(27, 58, 92, 0.14);
   --text: #14181f;
   --muted: #4b5563;
+  --border: rgba(27, 58, 92, 0.16);
+  --border-soft: rgba(27, 58, 92, 0.09);
   --blueprint: #1b3a5c;
+  --blueprint-2: #2e5d8a;
+  --blueprint-tint: #e4ebf1;
   --primary: #e8622c;
   --primary-dark: #c94f1e;
+  --primary-shadow: #7a2e10;
+  --primary-tint: #fbe4d8;
   --success: #2f7a4d;
   --success-bg: #e1f0e6;
   --warning: #92620a;
   --warning-bg: #fdf1de;
   --danger: #b3261e;
   --danger-bg: #fce8e6;
-  --radius: 8px;
+  --info: #1552b8;
+  --info-bg: #e0eefe;
+  --radius: 4px;
+  --radius-sm: 3px;
   --shadow-sm: 0 1px 2px rgba(20, 24, 31, 0.06), 0 1px 1px rgba(20, 24, 31, 0.04);
   --shadow-md: 0 8px 20px rgba(20, 24, 31, 0.1);
   --font-display: "Space Grotesk", "Inter", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, monospace;
   font-family: "Inter", "Segoe UI", system-ui, -apple-system, sans-serif;
 }
 
@@ -50,7 +67,7 @@ body {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 20px 32px;
+  padding: 18px 32px;
   background: var(--surface);
   border-bottom: 1px solid var(--border);
 }
@@ -58,37 +75,47 @@ body {
 .brand {
   display: flex;
   align-items: center;
-  gap: 14px;
+  gap: 12px;
 }
 
 .brand-mark {
-  width: 40px;
-  height: 40px;
-  border-radius: 10px;
+  position: relative;
+  width: 38px;
+  height: 38px;
+  border-radius: var(--radius);
   background: var(--blueprint);
   color: white;
   display: flex;
   align-items: center;
   justify-content: center;
+  font-family: var(--font-display);
   font-weight: 700;
-  font-size: 18px;
+  font-size: 17px;
+}
+
+.brand-mark::after {
+  content: "";
+  position: absolute;
+  inset: 4px;
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  border-radius: 2px;
 }
 
 .brand h1 {
   margin: 0;
-  font-size: 18px;
+  font-size: 17px;
 }
 
 .brand p {
   margin: 0;
-  font-size: 13px;
+  font-size: 12.5px;
   color: var(--muted);
 }
 
 .app-main {
   flex: 1;
   padding: 32px;
-  max-width: 1040px;
+  max-width: 1080px;
   width: 100%;
   margin: 0 auto;
 }
@@ -96,14 +123,16 @@ body {
 .app-footer {
   text-align: center;
   padding: 16px;
-  font-size: 12px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.02em;
   color: var(--muted);
 }
 
 .app-footer code {
-  background: var(--border);
+  background: var(--border-soft);
   padding: 2px 6px;
-  border-radius: 4px;
+  border-radius: var(--radius-sm);
 }
 
 .grid-2 {
@@ -120,6 +149,10 @@ body {
     padding: 16px;
   }
 }
+
+/* ---------------------------------------------------------------------- */
+/* Tarjetas + folio                                                        */
+/* ---------------------------------------------------------------------- */
 
 .card {
   background: var(--surface);
@@ -139,15 +172,66 @@ body {
   margin-top: 0;
 }
 
+/* Cabecera tipo orden de trabajo: eyebrow + folio, como un encabezado de
+   ticket. Uso: <div class="folio-header"><span class="mono-label">...</span>
+   <span class="folio-code">FOLIO Q-0148</span></div> antes del contenido de
+   la tarjeta (la tarjeta pierde su padding-top; ver .folio-card). */
+.folio-card {
+  padding: 0;
+  overflow: hidden;
+}
+
+.folio-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 24px;
+  border-bottom: 1px solid var(--border-soft);
+}
+
+.folio-card > .folio-body {
+  padding: 24px;
+}
+
+.mono-label {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.mono-label.accent {
+  color: var(--blueprint-2);
+}
+
+.folio-code {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  letter-spacing: 0.05em;
+  color: var(--muted);
+}
+
 .auth-card {
   max-width: 420px;
   margin: 40px auto;
 }
 
+.auth-kicker {
+  display: block;
+  margin-bottom: 8px;
+}
+
+/* ---------------------------------------------------------------------- */
+/* Formularios                                                             */
+/* ---------------------------------------------------------------------- */
+
 .stack {
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 16px;
 }
 
 .row {
@@ -162,23 +246,43 @@ body {
 label {
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  font-size: 13px;
-  font-weight: 600;
+  gap: 7px;
+  font-size: 14px;
   color: var(--text);
+}
+
+.field-label {
+  display: block;
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  font-weight: 600;
+  color: var(--muted);
 }
 
 input,
 select,
 textarea {
-  font-family: inherit;
+  font-family: "Inter", system-ui, sans-serif;
   font-size: 14px;
   font-weight: 400;
-  padding: 10px 12px;
-  border-radius: 8px;
+  text-transform: none;
+  letter-spacing: normal;
+  padding: 10px 13px;
+  border-radius: var(--radius-sm);
   border: 1px solid var(--border);
-  background: var(--bg);
+  background: var(--surface);
   color: var(--text);
+}
+
+select {
+  appearance: none;
+  -webkit-appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1L6 6L11 1' stroke='%234B5563' stroke-width='1.4' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 13px center;
+  padding-right: 34px;
 }
 
 input:focus,
@@ -188,10 +292,14 @@ textarea:focus {
   outline-offset: 1px;
 }
 
+/* ---------------------------------------------------------------------- */
+/* Botones                                                                 */
+/* ---------------------------------------------------------------------- */
+
 .btn {
   border: none;
-  border-radius: 8px;
-  padding: 10px 16px;
+  border-radius: var(--radius-sm);
+  padding: 11px 18px;
   font-size: 14px;
   font-weight: 600;
   cursor: pointer;
@@ -200,28 +308,36 @@ textarea:focus {
 }
 
 .btn:disabled {
-  opacity: 0.6;
+  opacity: 0.55;
   cursor: not-allowed;
+  box-shadow: none !important;
+  transform: none !important;
 }
 
 .btn-primary {
   background: var(--primary);
   color: white;
+  box-shadow: 3px 3px 0 var(--primary-shadow);
 }
 
 .btn-primary:hover:not(:disabled) {
-  background: var(--primary-dark);
-  box-shadow: var(--shadow-sm);
-  transform: translateY(-1px);
+  transform: translate(-1px, -1px);
+  box-shadow: 4px 4px 0 var(--primary-shadow);
 }
 
 .btn-primary:active:not(:disabled) {
-  transform: translateY(0);
+  transform: translate(0, 0);
+  box-shadow: 1px 1px 0 var(--primary-shadow);
 }
 
 .btn-secondary {
-  background: var(--border);
-  color: var(--text);
+  background: transparent;
+  color: var(--blueprint);
+  border: 1.5px solid var(--blueprint);
+}
+
+.btn-secondary:hover:not(:disabled) {
+  background: var(--blueprint-tint);
 }
 
 .btn-ghost {
@@ -235,19 +351,21 @@ textarea:focus {
 }
 
 .auth-switch {
-  margin-top: 14px;
+  margin-top: 16px;
   text-align: center;
+  font-size: 13px;
 }
 
 .link-btn {
   background: none;
   border: none;
   padding: 0;
-  color: var(--accent, #1B3A5C);
+  color: var(--blueprint);
   font: inherit;
   font-weight: 600;
   cursor: pointer;
   text-decoration: underline;
+  text-underline-offset: 2px;
 }
 
 .muted {
@@ -259,14 +377,14 @@ textarea:focus {
   background: var(--warning-bg);
   color: var(--warning);
   padding: 8px 12px;
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
   font-size: 13px;
 }
 
 .banner {
   margin: 12px 32px 0;
   padding: 12px 16px;
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
   cursor: pointer;
   font-size: 14px;
 }
@@ -288,6 +406,10 @@ textarea:focus {
   gap: 12px;
 }
 
+/* ---------------------------------------------------------------------- */
+/* Listas de solicitudes / matches — fichas de ticket                      */
+/* ---------------------------------------------------------------------- */
+
 .request-list,
 .match-list {
   list-style: none;
@@ -304,10 +426,10 @@ textarea:focus {
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  padding: 12px 14px;
+  padding: 13px 16px;
   border: 1px solid var(--border);
-  border-radius: 8px;
-  background: var(--bg);
+  border-radius: var(--radius);
+  background: var(--surface);
   cursor: pointer;
   text-align: left;
   font-family: inherit;
@@ -315,29 +437,39 @@ textarea:focus {
 }
 
 .request-item:hover {
-  border-color: var(--primary);
+  border-color: var(--blueprint-2);
   box-shadow: var(--shadow-sm);
   transform: translateY(-1px);
 }
 
 .match-item {
   border: 1px solid var(--border);
-  border-radius: 8px;
-  padding: 14px;
-  background: var(--bg);
+  border-radius: var(--radius);
+  padding: 15px 16px;
+  background: var(--surface);
   display: flex;
   flex-direction: column;
   gap: 10px;
 }
 
+.mono {
+  font-family: var(--font-mono);
+}
+
+/* ---------------------------------------------------------------------- */
+/* Badges — estampa tipo folio (como .stub-number del landing), no pildora */
+/* ---------------------------------------------------------------------- */
+
 .badge {
   display: inline-block;
-  padding: 3px 10px;
-  border-radius: 999px;
-  font-size: 12px;
+  padding: 3px 9px;
+  border-radius: var(--radius-sm);
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  letter-spacing: 0.03em;
   font-weight: 600;
   white-space: nowrap;
-  text-transform: capitalize;
+  text-transform: uppercase;
 }
 
 .badge-open,
@@ -372,27 +504,39 @@ textarea:focus {
   color: var(--warning);
 }
 
+/* ---------------------------------------------------------------------- */
+/* Navegación por pestañas — ficha de orden, no pastilla flotante          */
+/* ---------------------------------------------------------------------- */
+
 .tab-bar {
   display: flex;
-  gap: 8px;
+  gap: 34px;
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: 999px;
-  padding: 6px;
+  border-radius: var(--radius);
+  padding: 0 22px;
   width: fit-content;
 }
 
 .tab {
+  position: relative;
   border: none;
   background: transparent;
   color: var(--muted);
-  font-family: inherit;
-  font-size: 14px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
   font-weight: 600;
-  padding: 8px 18px;
-  border-radius: 999px;
+  padding: 16px 0;
   cursor: pointer;
-  transition: background-color 0.15s ease, color 0.15s ease;
+  transition: color 0.15s ease;
+}
+
+.tab-code {
+  color: var(--blueprint-2);
+  margin-right: 8px;
+  opacity: 0.75;
 }
 
 .tab:hover {
@@ -400,8 +544,23 @@ textarea:focus {
 }
 
 .tab-active {
-  background: var(--blueprint);
-  color: #fff;
+  background: transparent;
+  color: var(--blueprint);
+}
+
+.tab-active::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -1px;
+  height: 2px;
+  background: var(--primary);
+}
+
+.tab-active .tab-code {
+  color: var(--blueprint);
+  opacity: 1;
 }
 
 .sub-meta {
@@ -414,7 +573,7 @@ textarea:focus {
 
 .sub-meta strong {
   color: var(--text);
-  font-family: "IBM Plex Mono", "Space Grotesk", monospace;
+  font-family: var(--font-mono);
 }
 
 .sub-actions {
@@ -441,8 +600,12 @@ textarea:focus {
 
 .occurrence-item strong {
   color: var(--text);
-  font-family: "IBM Plex Mono", "Space Grotesk", monospace;
+  font-family: var(--font-mono);
 }
+
+/* ---------------------------------------------------------------------- */
+/* Cotización IA — panel técnico de resultado                              */
+/* ---------------------------------------------------------------------- */
 
 .quote-thumbs {
   display: flex;
@@ -450,28 +613,82 @@ textarea:focus {
   gap: 8px;
 }
 
-.quote-thumb {
-  width: 96px;
-  height: 96px;
-  object-fit: cover;
-  border-radius: 8px;
+.quote-thumb-frame {
+  width: 64px;
+  height: 64px;
+  border-radius: var(--radius-sm);
   border: 1px solid var(--border);
+  background: var(--bg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--muted);
+  overflow: hidden;
+}
+
+.quote-thumb {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.readout-panel {
+  position: relative;
+  background: var(--blueprint-tint);
+  border-radius: var(--radius);
+  padding: 18px 20px;
+  overflow: hidden;
+}
+
+.readout-panel::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image: linear-gradient(rgba(27, 58, 92, 0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(27, 58, 92, 0.05) 1px, transparent 1px);
+  background-size: 18px 18px;
+}
+
+.readout-panel > * {
+  position: relative;
 }
 
 .quote-price {
-  font-family: "Space Grotesk", var(--font-display);
-  font-size: 26px;
+  font-family: var(--font-display);
+  font-size: 32px;
   font-weight: 700;
   color: var(--blueprint);
+  letter-spacing: -0.01em;
+  margin-top: 4px;
+}
+
+.quote-price .unit {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--blueprint-2);
 }
 
 .scope-list {
-  margin: 6px 0 0;
-  padding-left: 18px;
+  margin: 10px 0 0;
+  padding: 0;
+  list-style: none;
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  font-size: 14px;
+  gap: 9px;
+  font-size: 13.5px;
+}
+
+.scope-list li {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  line-height: 1.5;
+}
+
+.scope-list li svg {
+  flex-shrink: 0;
+  margin-top: 2px;
 }
 
 .scope-list.muted-list {
@@ -479,11 +696,27 @@ textarea:focus {
   font-size: 13px;
 }
 
+.confidence-chip {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.03em;
+  background: var(--success-bg);
+  color: var(--success);
+  padding: 4px 10px;
+  border-radius: var(--radius-sm);
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
 .publish-form {
   margin-top: 4px;
   border-top: 1px dashed var(--border);
-  padding-top: 14px;
+  padding-top: 16px;
 }
+
+/* ---------------------------------------------------------------------- */
+/* Chat                                                                    */
+/* ---------------------------------------------------------------------- */
 
 .chat-panel {
   margin-top: 8px;
@@ -507,18 +740,19 @@ textarea:focus {
 
 .message {
   align-self: flex-start;
-  background: var(--border);
+  background: var(--bg);
+  border: 1px solid var(--border-soft);
   padding: 8px 12px;
-  border-radius: 12px 12px 12px 2px;
+  border-radius: var(--radius);
   max-width: 80%;
   font-size: 13px;
 }
 
 .message.mine {
   align-self: flex-end;
-  background: var(--primary);
+  background: var(--blueprint);
+  border-color: var(--blueprint);
   color: white;
-  border-radius: 12px 12px 2px 12px;
 }
 
 .review-form {
@@ -528,12 +762,19 @@ textarea:focus {
 }
 
 .chat-lock {
+  display: flex;
+  align-items: center;
+  gap: 6px;
   margin: 0;
   padding: 8px 12px;
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
   font-size: 12px;
   background: var(--warning-bg);
   color: var(--warning);
+}
+
+.chat-lock svg {
+  flex-shrink: 0;
 }
 
 .chat-lock.unlocked {
@@ -549,10 +790,14 @@ textarea:focus {
   font-style: italic;
 }
 
+/* ---------------------------------------------------------------------- */
+/* Pagos — recibo de confianza (sello verde, dosificado aquí)              */
+/* ---------------------------------------------------------------------- */
+
 .payment-panel {
   margin-top: 8px;
   border-top: 1px dashed var(--border);
-  padding-top: 12px;
+  padding-top: 14px;
   display: flex;
   flex-direction: column;
   gap: 12px;
@@ -561,12 +806,18 @@ textarea:focus {
 .payment-summary {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 8px;
   background: var(--bg);
   border: 1px solid var(--border);
-  border-radius: 8px;
-  padding: 12px 14px;
+  border-radius: var(--radius);
+  padding: 14px 16px;
   font-size: 14px;
+}
+
+.payment-summary .space-between:last-child {
+  border-top: 1px dashed var(--border);
+  padding-top: 8px;
+  margin-top: 2px;
 }
 
 .payment-status-pending {
@@ -575,8 +826,8 @@ textarea:focus {
 }
 
 .payment-status-held_in_escrow {
-  background: #e0eefe;
-  color: #1552b8;
+  background: var(--info-bg);
+  color: var(--info);
 }
 
 .payment-status-released {
@@ -591,11 +842,50 @@ textarea:focus {
   color: var(--danger);
 }
 
-.milestone-list { list-style: none; margin: 8px 0 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
-.milestone-row { display: flex; flex-direction: column; gap: 8px; padding: 10px 12px; border: 1px dashed var(--border); border-radius: 8px; }
-.badge-pending { background: var(--warning-bg); color: var(--warning); }
-.badge-submitted { background: #e0eefe; color: #1552b8; }
-.badge-released { background: var(--success-bg); color: var(--success); }
+.trust-seal {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  font-weight: 600;
+  color: var(--success);
+}
+
+.milestone-list {
+  list-style: none;
+  margin: 8px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.milestone-row {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px 14px;
+  border: 1px dashed var(--border);
+  border-radius: var(--radius);
+}
+
+.badge-pending {
+  background: var(--warning-bg);
+  color: var(--warning);
+}
+
+.badge-submitted {
+  background: var(--info-bg);
+  color: var(--info);
+}
+
+.badge-released {
+  background: var(--success-bg);
+  color: var(--success);
+}
 
 /* ---------------------------------------------------------------------- */
 /* Estados vacíos                                                          */
@@ -606,29 +896,28 @@ textarea:focus {
   flex-direction: column;
   align-items: center;
   text-align: center;
-  gap: 6px;
-  padding: 36px 16px;
+  gap: 8px;
+  padding: 40px 16px;
   border: 1px dashed var(--border);
-  border-radius: 8px;
+  border-radius: var(--radius);
   background: var(--bg);
 }
 
 .empty-state-icon {
-  font-size: 28px;
-  line-height: 1;
-  margin-bottom: 4px;
-  filter: grayscale(1);
-  opacity: 0.55;
+  color: var(--blueprint-2);
+  opacity: 0.6;
+  margin-bottom: 2px;
 }
 
 .empty-state strong {
-  font-size: 14px;
+  font-family: var(--font-display);
+  font-size: 14.5px;
   color: var(--text);
 }
 
 .empty-state p {
   margin: 0;
-  max-width: 32ch;
+  max-width: 34ch;
   font-size: 13px;
   color: var(--muted);
 }
@@ -636,13 +925,6 @@ textarea:focus {
 /* ---------------------------------------------------------------------- */
 /* Dropzone de fotos (cotización con IA)                                   */
 /* ---------------------------------------------------------------------- */
-
-.field-label {
-  display: block;
-  font-size: 13px;
-  font-weight: 600;
-  margin-bottom: 6px;
-}
 
 .dropzone-wrap {
   display: flex;
@@ -655,39 +937,40 @@ textarea:focus {
   flex-direction: column;
   align-items: center;
   text-align: center;
-  gap: 4px;
-  padding: 24px 16px;
+  gap: 6px;
+  padding: 26px 16px;
   border: 1.5px dashed var(--border);
-  border-radius: 10px;
+  border-radius: var(--radius);
   background: var(--bg);
   cursor: pointer;
   transition: border-color 0.15s ease, background-color 0.15s ease;
+  color: var(--blueprint-2);
 }
 
 .dropzone:hover,
 .dropzone:focus-visible {
-  border-color: var(--primary);
+  border-color: var(--blueprint-2);
+  background: var(--blueprint-tint);
 }
 
 .dropzone-active {
   border-color: var(--primary);
-  background: #fdf0ea;
-}
-
-.dropzone-icon {
-  font-size: 26px;
-  line-height: 1;
+  background: var(--primary-tint);
+  color: var(--primary-shadow);
 }
 
 .dropzone-text {
-  margin: 4px 0 0;
+  margin: 2px 0 0;
   font-size: 13px;
   color: var(--text);
 }
 
 .dropzone-hint {
   margin: 0;
-  font-size: 12px;
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
   color: var(--muted);
 }
 
@@ -710,7 +993,7 @@ textarea:focus {
   width: 100%;
   height: 100%;
   object-fit: cover;
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
   border: 1px solid var(--border);
 }
 

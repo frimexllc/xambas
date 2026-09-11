@@ -90,18 +90,19 @@ export function AuthFlow({ onAuthenticated, onError }) {
   if (step === "otp") {
     return (
       <section className="card auth-card">
+        <span className="mono-label accent auth-kicker">Verificación · OTP</span>
         <h2>Verifica tu telefono</h2>
         <p className="muted">
           Enviamos un codigo por SMS a <strong>{otpState?.target}</strong>.
         </p>
         {otpState?.debugCode && (
           <p className="hint">
-            Modo desarrollo: tu codigo es <strong>{otpState.debugCode}</strong>
+            Modo desarrollo: tu codigo es <strong className="mono">{otpState.debugCode}</strong>
           </p>
         )}
         <form onSubmit={handleVerify} className="stack">
           <label>
-            Codigo de 6 digitos
+            <span className="field-label">Código de 6 dígitos</span>
             <input
               value={code}
               onChange={(e) => setCode(e.target.value)}
@@ -124,11 +125,12 @@ export function AuthFlow({ onAuthenticated, onError }) {
   if (mode === "login") {
     return (
       <section className="card auth-card">
+        <span className="mono-label accent auth-kicker">Acceso · Cliente</span>
         <h2>Inicia sesion</h2>
         <p className="muted">Te enviaremos un codigo al telefono de tu cuenta.</p>
         <form onSubmit={handleLogin} className="stack">
           <label>
-            Telefono o correo
+            <span className="field-label">Teléfono o correo</span>
             <input
               required
               value={identifier}
@@ -152,11 +154,12 @@ export function AuthFlow({ onAuthenticated, onError }) {
 
   return (
     <section className="card auth-card">
+      <span className="mono-label accent auth-kicker">Registro · Cliente</span>
       <h2>Crea tu cuenta de cliente</h2>
       <p className="muted">Publica lo que necesitas y te conectamos con proveedores verificados.</p>
       <form onSubmit={handleRegister} className="stack">
         <label>
-          Correo
+          <span className="field-label">Correo</span>
           <input
             type="email"
             required
@@ -166,7 +169,7 @@ export function AuthFlow({ onAuthenticated, onError }) {
           />
         </label>
         <label>
-          Telefono (con lada)
+          <span className="field-label">Teléfono (con lada)</span>
           <input
             required
             value={form.phone}

@@ -9,10 +9,10 @@ import { MilestonesPanel } from "./MilestonesPanel.jsx";
 // una vez y se pasan a los paneles que las necesitan para sus <select>.
 
 const TABS = [
-  { id: "requests", label: "Solicitudes" },
-  { id: "recurring", label: "Servicios recurrentes" },
-  { id: "ai-quote", label: "Cotización IA" },
-  { id: "milestones", label: "Pagos por etapas" },
+  { id: "requests", code: "S.01", label: "Solicitudes" },
+  { id: "recurring", code: "S.02", label: "Recurrentes" },
+  { id: "ai-quote", code: "S.03", label: "Cotización IA" },
+  { id: "milestones", code: "S.04", label: "Pagos por etapas" },
 ];
 
 export function ClientHome({ session, onError }) {
@@ -38,6 +38,7 @@ export function ClientHome({ session, onError }) {
             onClick={() => setView(tab.id)}
             data-testid={`tab-${tab.id}`}
           >
+            <span className="tab-code">{tab.code}</span>
             {tab.label}
           </button>
         ))}

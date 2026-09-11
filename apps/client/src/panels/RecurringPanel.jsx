@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { api } from "../lib/api.js";
 import { COUNTRY_CODE } from "../constants.js";
 import { EmptyState } from "../components/EmptyState.jsx";
+import { RepeatIcon } from "../components/icons.jsx";
 
 // Servicios recurrentes: suscripciones y visitas programadas.
 
@@ -41,18 +42,24 @@ export function RecurringPanel({ session, categories, onError }) {
 
   return (
     <div className="grid-2" data-testid="recurring-panel">
-      <section className="card">
-        <h2>Nueva suscripción</h2>
-        <p className="muted">
-          Programa un servicio que se repite (limpieza semanal, mantenimiento mensual) y genera
-          cada visita con proveedores verificados, sin volver a publicar desde cero.
-        </p>
-        <NewSubscriptionForm
-          categories={categories}
-          session={session}
-          onCreated={refresh}
-          onError={onError}
-        />
+      <section className="card folio-card">
+        <div className="folio-header">
+          <span className="mono-label accent">Orden de servicio</span>
+          <span className="folio-code">Nueva suscripción</span>
+        </div>
+        <div className="folio-body">
+          <h2>Nueva suscripción</h2>
+          <p className="muted">
+            Programa un servicio que se repite (limpieza semanal, mantenimiento mensual) y genera
+            cada visita con proveedores verificados, sin volver a publicar desde cero.
+          </p>
+          <NewSubscriptionForm
+            categories={categories}
+            session={session}
+            onCreated={refresh}
+            onError={onError}
+          />
+        </div>
       </section>
 
       <section className="card">
@@ -60,7 +67,7 @@ export function RecurringPanel({ session, categories, onError }) {
         {loading && <p className="muted">Cargando...</p>}
         {!loading && subscriptions.length === 0 && (
           <EmptyState
-            icon="🔁"
+            icon={<RepeatIcon />}
             title="Aún no tienes servicios recurrentes"
             hint="Programa uno a la izquierda (limpieza semanal, mantenimiento mensual) y generamos cada visita automáticamente."
           />
@@ -134,7 +141,7 @@ function NewSubscriptionForm({ categories, session, onCreated, onError }) {
   return (
     <form onSubmit={handleSubmit} className="stack" data-testid="new-subscription-form">
       <label>
-        Categoría
+        <span className="field-label">Categoría</span>
         <select
           required
           value={form.categoryId}
@@ -150,7 +157,7 @@ function NewSubscriptionForm({ categories, session, onCreated, onError }) {
         </select>
       </label>
       <label>
-        Título
+        <span className="field-label">Título</span>
         <input
           required
           minLength={4}
@@ -162,7 +169,7 @@ function NewSubscriptionForm({ categories, session, onCreated, onError }) {
         />
       </label>
       <label>
-        Descripción
+        <span className="field-label">Descripción</span>
         <textarea
           required
           minLength={10}
@@ -176,7 +183,7 @@ function NewSubscriptionForm({ categories, session, onCreated, onError }) {
       </label>
       <div className="row">
         <label>
-          Ciudad
+          <span className="field-label">Ciudad</span>
           <input
             required
             value={form.city}
@@ -186,7 +193,7 @@ function NewSubscriptionForm({ categories, session, onCreated, onError }) {
           />
         </label>
         <label>
-          Zona de cobertura
+          <span className="field-label">Zona de cobertura</span>
           <input
             required
             value={form.coverageZone}
@@ -198,7 +205,7 @@ function NewSubscriptionForm({ categories, session, onCreated, onError }) {
       </div>
       <div className="row">
         <label>
-          Frecuencia
+          <span className="field-label">Frecuencia</span>
           <select
             value={form.frequency}
             onChange={(e) => setForm({ ...form, frequency: e.target.value })}
@@ -212,7 +219,7 @@ function NewSubscriptionForm({ categories, session, onCreated, onError }) {
           </select>
         </label>
         <label>
-          Primera visita (opcional)
+          <span className="field-label">Primera visita (opcional)</span>
           <input
             type="date"
             value={form.startDate}
@@ -223,7 +230,7 @@ function NewSubscriptionForm({ categories, session, onCreated, onError }) {
       </div>
       <div className="row">
         <label>
-          Presupuesto por visita (opcional)
+          <span className="field-label">Presupuesto por visita (opcional)</span>
           <input
             type="number"
             min="0"
@@ -234,7 +241,7 @@ function NewSubscriptionForm({ categories, session, onCreated, onError }) {
           />
         </label>
         <label>
-          Horario preferido (opcional)
+          <span className="field-label">Horario preferido (opcional)</span>
           <input
             value={form.preferredTime}
             onChange={(e) => setForm({ ...form, preferredTime: e.target.value })}

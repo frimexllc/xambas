@@ -6,6 +6,7 @@ import { COUNTRY_CODE } from "../constants.js";
 import { StatusBadge } from "../components/StatusBadge.jsx";
 import { ChatPanel } from "../components/ChatPanel.jsx";
 import { EmptyState } from "../components/EmptyState.jsx";
+import { ClipboardIcon, SealIcon } from "../components/icons.jsx";
 
 // Pestaña "Solicitudes": alta de solicitud + lista + detalle (matches, chat,
 // pago en custodia, plan por etapas y reseña).
@@ -48,14 +49,20 @@ export function RequestsPanel({ session, categories, onError }) {
 
   return (
     <div className="grid-2">
-      <section className="card">
-        <h2>Nueva solicitud de servicio</h2>
-        <NewRequestForm
-          categories={categories}
-          session={session}
-          onCreated={(requestId) => setSelectedRequestId(requestId)}
-          onError={onError}
-        />
+      <section className="card folio-card">
+        <div className="folio-header">
+          <span className="mono-label accent">Orden de servicio</span>
+          <span className="folio-code">Nueva solicitud</span>
+        </div>
+        <div className="folio-body">
+          <h2>Nueva solicitud de servicio</h2>
+          <NewRequestForm
+            categories={categories}
+            session={session}
+            onCreated={(requestId) => setSelectedRequestId(requestId)}
+            onError={onError}
+          />
+        </div>
       </section>
 
       <section className="card">
@@ -63,7 +70,7 @@ export function RequestsPanel({ session, categories, onError }) {
         {loading && <p className="muted">Cargando...</p>}
         {!loading && requests.length === 0 && (
           <EmptyState
-            icon="📋"
+            icon={<ClipboardIcon />}
             title="Aún no tienes solicitudes"
             hint="Publica la primera a la izquierda y te conectamos con proveedores verificados en tu zona."
           />
@@ -77,6 +84,9 @@ export function RequestsPanel({ session, categories, onError }) {
                 data-testid={`request-item-${request.id}`}
               >
                 <div>
+                  <span className="mono-label" style={{ display: "block", marginBottom: 3 }}>
+                    R-{request.id.slice(-6).toUpperCase()}
+                  </span>
                   <strong>{request.title}</strong>
                   <p className="muted">{request.category_name} · {request.city}</p>
                 </div>
@@ -130,7 +140,7 @@ function NewRequestForm({ categories, session, onCreated, onError }) {
   return (
     <form onSubmit={handleSubmit} className="stack">
       <label>
-        Categoria
+        <span className="field-label">Categoría</span>
         <select
           required
           value={form.categoryId}
@@ -145,7 +155,7 @@ function NewRequestForm({ categories, session, onCreated, onError }) {
         </select>
       </label>
       <label>
-        Titulo
+        <span className="field-label">Título</span>
         <input
           required
           minLength={4}
@@ -156,7 +166,7 @@ function NewRequestForm({ categories, session, onCreated, onError }) {
         />
       </label>
       <label>
-        Descripcion
+        <span className="field-label">Descripción</span>
         <textarea
           required
           minLength={10}
@@ -169,7 +179,7 @@ function NewRequestForm({ categories, session, onCreated, onError }) {
       </label>
       <div className="row">
         <label>
-          Ciudad
+          <span className="field-label">Ciudad</span>
           <input
             required
             value={form.city}
@@ -178,7 +188,7 @@ function NewRequestForm({ categories, session, onCreated, onError }) {
           />
         </label>
         <label>
-          Zona de cobertura
+          <span className="field-label">Zona de cobertura</span>
           <input
             required
             value={form.coverageZone}
@@ -188,7 +198,7 @@ function NewRequestForm({ categories, session, onCreated, onError }) {
         </label>
       </div>
       <label>
-        Presupuesto aproximado (opcional)
+        <span className="field-label">Presupuesto aproximado (opcional)</span>
         <input
           type="number"
           min="0"
@@ -277,7 +287,9 @@ function RequestDetail({ session, requestId, onBack, onError }) {
               <div className="space-between">
                 <div>
                   <strong>{match.provider_business_name}</strong>
-                  <p className="muted">Score: {match.score} · {match.reasons.join(", ")}</p>
+                  <p className="muted">
+                    <span className="mono">{match.score} pts</span> · {match.reasons.join(", ")}
+                  </p>
                 </div>
                 <StatusBadge status={match.status} />
               </div>
@@ -458,7 +470,7 @@ function PaymentPanel({ match, session, onClose, onError }) {
             forma segura. El dinero queda retenido hasta que confirmes que el trabajo esta terminado.
           </p>
           <label>
-            Monto acordado (MXN)
+            <span className="field-label">Monto acordado (MXN)</span>
             <input
               type="number"
               min="1"
@@ -489,15 +501,15 @@ function PaymentPanel({ match, session, onClose, onError }) {
           <div className="payment-summary">
             <div className="space-between">
               <span>Monto del trabajo</span>
-              <strong>${payment.job_amount.toFixed(2)} {payment.currency.toUpperCase()}</strong>
+              <strong className="mono">${payment.job_amount.toFixed(2)} {payment.currency.toUpperCase()}</strong>
             </div>
             <div className="space-between">
               <span>Tarifa de servicio</span>
-              <span>${payment.client_fee_amount.toFixed(2)}</span>
+              <span className="mono">${payment.client_fee_amount.toFixed(2)}</span>
             </div>
             <div className="space-between">
               <span>Total pagado</span>
-              <strong>${payment.client_total.toFixed(2)}</strong>
+              <strong className="mono">${payment.client_total.toFixed(2)}</strong>
             </div>
             <div className="space-between">
               <span>Estado</span>
@@ -520,9 +532,10 @@ function PaymentPanel({ match, session, onClose, onError }) {
           )}
 
           {payment.status === "released" && (
-            <p className="muted">
-              Pago liberado al proveedor. Gracias por confirmar el trabajo.
-            </p>
+            <span className="trust-seal">
+              <SealIcon size={18} />
+              Pago liberado al proveedor
+            </span>
           )}
         </div>
       )}
@@ -653,7 +666,7 @@ function MilestonePlanCreator({ matchId, session, onClose, onError }) {
     return (
       <div className="payment-panel">
         <p className="hint" data-testid="milestone-plan-created">
-          ✅ Plan por etapas creado. Gestiónalo en la pestaña “Pagos por etapas”.
+          Plan por etapas creado. Gestiónalo en la pestaña "Pagos por etapas".
         </p>
         <button className="btn btn-ghost" onClick={onClose}>Cerrar</button>
       </div>

@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { CameraIcon } from "./icons.jsx";
 
 // Selector de fotos con arrastrar-y-soltar + miniaturas, en vez del
 // <input type="file"> nativo del navegador (que rompía el estilo del resto
@@ -62,14 +63,12 @@ export function PhotoDropzone({ files, onChange, maxFiles = 5, testId, accept })
           data-testid={testId}
           onChange={(event) => pickFiles(event.target.files)}
         />
-        <span className="dropzone-icon" aria-hidden="true">
-          📷
-        </span>
+        <CameraIcon size={24} />
         <p className="dropzone-text">
           <strong>Arrastra tus fotos aquí</strong> o haz clic para elegir
         </p>
         <p className="dropzone-hint">
-          JPEG, PNG o WebP · hasta {maxFiles} foto{maxFiles === 1 ? "" : "s"}
+          JPEG · PNG · WEBP — HASTA {maxFiles}
         </p>
       </div>
 
