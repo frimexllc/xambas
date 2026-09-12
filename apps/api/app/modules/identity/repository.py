@@ -64,6 +64,12 @@ class IdentityRepository:
     async def get_user_by_id(self, user_id: str) -> dict[str, Any] | None:
         return await self._db.users.find_one({"_id": ObjectId(user_id)})
 
+    async def get_user_by_phone(self, phone: str) -> dict[str, Any] | None:
+        return await self._db.users.find_one({"phone": phone.strip()})
+
+    async def get_user_by_email(self, email: str) -> dict[str, Any] | None:
+        return await self._db.users.find_one({"email": email.strip().lower()})
+
     async def list_users(self) -> list[dict[str, Any]]:
         cursor = self._db.users.find().sort("created_at", -1)
         return await cursor.to_list(length=500)
@@ -167,3 +173,6 @@ class IdentityRepository:
         result = await self._db.sessions.insert_one(document)
         document["_id"] = result.inserted_id
         return document
+
+    async def get_active_session_by_token_hash(self, token_hash: str) -> dict[str, Any] | None:
+        return await self._db.sessions.find_one({"token_hash": token_hash, "status": "active"})

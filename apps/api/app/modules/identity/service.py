@@ -5,6 +5,7 @@ from fastapi import HTTPException, status
 from pymongo.errors import DuplicateKeyError
 
 from app.core.config import settings
+from app.core.rate_limit import rate_limiter
 from app.modules.identity.auth import build_expiration, build_session_expiration, build_session_token, hash_secret, utc_now
 from app.modules.identity.providers.base import OtpProvider
 from app.modules.identity.providers.dev_provider import DevOtpProvider
@@ -13,6 +14,8 @@ from app.modules.identity.repository import IdentityRepository
 from app.modules.identity.schemas import (
     IdentityStatusResponse,
     IdentityUserResponse,
+    LoginStartRequest,
+    LoginStartResponse,
     OtpRequestPayload,
     OtpRequestResponse,
     OtpVerifyPayload,
@@ -113,8 +116,70 @@ class IdentityService:
             ),
         )
 
-    async def request_otp(self, payload: OtpRequestPayload) -> OtpRequestResponse:
+    async def start_login(
+        self, payload: LoginStartRequest, *, client_ip: str | None = None
+    ) -> LoginStartResponse:
+        """Login de una cuenta existente: identificador (teléfono o correo) -> OTP.
+
+        Devuelve el ``user_id`` y el ``challenge_id`` para completar con
+        ``POST /identity/otp/verify`` (que es lo que crea la sesión).
+        """
+        identifier = payload.identifier.strip()
+        await rate_limiter.hit(
+            f"login:identifier:{identifier.lower()}",
+            limit=settings.login_limit_per_identifier,
+            window_minutes=settings.rate_limit_window_minutes,
+        )
+        if client_ip and settings.otp_provider != "dev":
+            await rate_limiter.hit(
+                f"login:ip:{client_ip}",
+                limit=settings.login_limit_per_ip,
+                window_minutes=settings.rate_limit_window_minutes,
+            )
+
+        user_document = await self._repository.get_user_by_phone(identifier)
+        if user_document is None:
+            user_document = await self._repository.get_user_by_email(identifier)
+        if user_document is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="no hay una cuenta con ese telefono o correo",
+            )
+        if not user_document.get("is_active", True):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="la cuenta esta desactivada",
+            )
+
+        user_id = str(user_document["_id"])
+        otp_response = await self.request_otp(
+            OtpRequestPayload(user_id=user_id, purpose="login", channel=payload.channel)
+        )
+        return LoginStartResponse(
+            module="identity",
+            status="otp_sent",
+            user_id=user_id,
+            challenge_id=otp_response.challenge_id,
+            expires_at=otp_response.expires_at,
+            delivery_target=otp_response.delivery_target,
+            debug_code=otp_response.debug_code,
+        )
+
+    async def request_otp(
+        self, payload: OtpRequestPayload, *, client_ip: str | None = None
+    ) -> OtpRequestResponse:
         user_document = await self._get_user_document_or_404(payload.user_id)
+        await rate_limiter.hit(
+            f"otp_request:user:{payload.user_id}",
+            limit=settings.otp_request_limit_per_user,
+            window_minutes=settings.rate_limit_window_minutes,
+        )
+        if client_ip and settings.otp_provider != "dev":
+            await rate_limiter.hit(
+                f"otp_request:ip:{client_ip}",
+                limit=settings.otp_request_limit_per_ip,
+                window_minutes=settings.rate_limit_window_minutes,
+            )
         dispatch = self._build_otp_provider().request_code(user_document["phone"], payload.channel)
         expires_at = build_expiration(settings.otp_ttl_minutes)
         challenge_document = await self._repository.create_otp_challenge(
@@ -199,6 +264,40 @@ class IdentityService:
                 device_name=session_document["device_name"],
             ),
         )
+
+    async def get_user_from_token(self, token: str) -> UserSummary:
+        """Resuelve el usuario dueño de un token de sesión (header Bearer).
+
+        El token se guarda hasheado; Mongo tiene un índice TTL sobre
+        ``expires_at`` pero la limpieza no es inmediata, así que revalidamos la
+        expiración aquí.
+        """
+        if not token:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="token de sesion vacio",
+            )
+        session_document = await self._repository.get_active_session_by_token_hash(hash_secret(token))
+        if session_document is None:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="token de sesion invalido o revocado",
+            )
+        expires_at = session_document["expires_at"]
+        if expires_at.tzinfo is None:
+            expires_at = expires_at.replace(tzinfo=timezone.utc)
+        if expires_at < utc_now():
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="la sesion expiro, vuelve a verificar tu telefono",
+            )
+        user_document = await self._get_user_document_or_404(session_document["user_id"])
+        if not user_document.get("is_active", True):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="la cuenta esta desactivada",
+            )
+        return self._serialize_user(user_document)
 
     async def list_users(self) -> UserListResponse:
         documents = await self._repository.list_users()

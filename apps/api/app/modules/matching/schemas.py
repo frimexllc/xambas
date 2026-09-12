@@ -46,7 +46,9 @@ class CategoryListResponse(BaseModel):
 
 
 class ServiceRequestCreateRequest(BaseModel):
-    client_id: str
+    # Vía HTTP el cliente sale del token; las llamadas internas (recurring) sí
+    # lo pasan explícitamente.
+    client_id: str | None = None
     category_id: str
     title: str = Field(min_length=4, max_length=140)
     description: str = Field(min_length=10, max_length=2000)

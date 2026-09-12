@@ -180,8 +180,13 @@ class MilestonesService:
             items=[self._serialize_plan(doc) for doc in documents],
         )
 
-    async def get_plan(self, plan_id: str) -> PlanResponse:
+    async def get_plan(self, plan_id: str, *, acting_user_id: str | None = None) -> PlanResponse:
         document = await self._get_plan_or_404(plan_id)
+        if acting_user_id is not None and acting_user_id not in (
+            document["client_id"],
+            document["provider_user_id"],
+        ):
+            raise HTTPException(status.HTTP_403_FORBIDDEN, "este plan no te pertenece")
         return PlanResponse(module="milestones", plan=self._serialize_plan(document))
 
     async def get_file(self, path: str) -> tuple[bytes, str]:

@@ -1,5 +1,7 @@
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, Depends, Query
 
+from app.modules.identity.dependencies import get_current_user, require_client, require_provider
+from app.modules.identity.schemas import UserSummary
 from app.modules.matching.schemas import (
     CategoryCreateRequest,
     CategoryListResponse,
@@ -38,35 +40,58 @@ async def get_category(category_id: str) -> CategorySummary:
 
 
 @router.post("/service-requests")
-async def create_service_request(payload: ServiceRequestCreateRequest) -> ServiceRequestResponse:
+async def create_service_request(
+    payload: ServiceRequestCreateRequest,
+    current_user: UserSummary = Depends(require_client),
+) -> ServiceRequestResponse:
+    payload = payload.model_copy(update={"client_id": current_user.id})
     return await matching_service.create_service_request(payload)
 
 
 @router.get("/service-requests")
-async def list_service_requests(client_id: str | None = Query(default=None)) -> ServiceRequestListResponse:
-    return await matching_service.list_service_requests(client_id=client_id)
+async def list_service_requests(
+    current_user: UserSummary = Depends(require_client),
+) -> ServiceRequestListResponse:
+    return await matching_service.list_service_requests(client_id=current_user.id)
 
 
 @router.get("/service-requests/{request_id}")
-async def get_service_request(request_id: str) -> ServiceRequestResponse:
-    return await matching_service.get_service_request(request_id)
+async def get_service_request(
+    request_id: str,
+    current_user: UserSummary = Depends(get_current_user),
+) -> ServiceRequestResponse:
+    return await matching_service.get_service_request(request_id, acting_user_id=current_user.id)
 
 
 @router.post("/service-requests/{request_id}/run")
-async def rerun_matching(request_id: str) -> MatchListResponse:
-    return await matching_service.rerun_matching(request_id)
+async def rerun_matching(
+    request_id: str,
+    current_user: UserSummary = Depends(require_client),
+) -> MatchListResponse:
+    return await matching_service.rerun_matching(request_id, acting_user_id=current_user.id)
 
 
 @router.get("/service-requests/{request_id}/matches")
-async def list_matches(request_id: str) -> MatchListResponse:
-    return await matching_service.list_matches(request_id)
+async def list_matches(
+    request_id: str,
+    current_user: UserSummary = Depends(get_current_user),
+) -> MatchListResponse:
+    return await matching_service.list_matches(request_id, acting_user_id=current_user.id)
 
 
 @router.get("/providers/{provider_user_id}/matches")
-async def list_matches_for_provider(provider_user_id: str) -> MatchListResponse:
-    return await matching_service.list_matches_for_provider(provider_user_id)
+async def list_matches_for_provider(
+    provider_user_id: str,
+    current_user: UserSummary = Depends(require_provider),
+) -> MatchListResponse:
+    # El proveedor solo ve sus propios matches, tome el id que tome la ruta.
+    return await matching_service.list_matches_for_provider(current_user.id)
 
 
 @router.post("/matches/{match_id}/accept")
-async def accept_match(match_id: str, payload: MatchAcceptRequest) -> MatchSummary:
-    return await matching_service.accept_match(match_id, payload.provider_user_id)
+async def accept_match(
+    match_id: str,
+    payload: MatchAcceptRequest,
+    current_user: UserSummary = Depends(require_provider),
+) -> MatchSummary:
+    return await matching_service.accept_match(match_id, current_user.id)

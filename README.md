@@ -275,6 +275,37 @@ La documentacion interactiva (Swagger) queda disponible en `http://localhost:800
   - `TWILIO_VERIFY_SERVICE_SID`
 - El backend mantiene politica local de intentos con `OTP_MAX_ATTEMPTS`.
 - Las sesiones se crean solo despues de una verificacion OTP exitosa.
+- **Login de una cuenta existente**: `POST /api/identity/login` con
+  `{ "identifier": "<telefono o correo>" }` busca al usuario y dispara un OTP
+  (`purpose=login`); se completa con `POST /api/identity/otp/verify`, que es lo
+  que emite la sesion. Antes solo existia `bootstrap` (que falla con 409 si la
+  cuenta ya existe), asi que "iniciar sesion" era volver a leer `localStorage`.
+- **Rate limiting** (`app/core/rate_limit.py`, ventana fija en Mongo): `POST
+  /identity/otp/request` y `POST /identity/login` limitan intentos por usuario
+  / identificador (`OTP_REQUEST_LIMIT_PER_USER`, `LOGIN_LIMIT_PER_IDENTIFIER`,
+  ambos por defecto 5 cada `RATE_LIMIT_WINDOW_MINUTES`, default 15). El límite
+  adicional por IP (`*_LIMIT_PER_IP`) solo se aplica con un proveedor de OTP
+  real (protege el gasto/abuso de SMS); en `OTP_PROVIDER=dev` no hay envío
+  real, así que se omite. Al superarse, la API responde `429`.
+
+### Autenticacion de endpoints de usuario (Bearer)
+
+`POST /api/identity/otp/verify` devuelve `session.token`. Los modulos
+`recurring` y `ai_quote` exigen ese token en cada request:
+
+```
+Authorization: Bearer <token>
+```
+
+- El `client_id` se toma del token, no del body/query (evita operar a nombre
+  de otro usuario). Los endpoints por id devuelven `403` si el recurso es de
+  otro cliente.
+- Quedan publicos a proposito: los `/status` y `GET /api/ai-quote/files/{path}`
+  (URL-capacidad con UUID irrepetible, igual que `/api/milestones/files/*`,
+  porque las etiquetas `<img>` del navegador no envian el header).
+- La dependencia reutilizable es `get_current_user` en
+  `app/modules/identity/dependencies.py`; `require_admin` (modulo `admin`) es su
+  equivalente para el panel.
 
 ## Categorias de Lanzamiento
 
@@ -413,6 +444,55 @@ bloques, es un proyecto aparte.
 - `BACKEND_PORT` en `deploy.bat` / `deploy.sh` esta alineado a `8000`, el
   mismo puerto que usan `apps/api/.env` y `VITE_API_BASE_URL` en los
   frontends. Si cambias el puerto de la API, actualiza los tres lugares.
+
+## Pruebas y CI
+
+### Suite de integración de la API (`apps/api/tests/`)
+
+Son pruebas de integración: corren contra una instancia **en ejecución** de la
+API (no la montan en proceso). Cubren `recurring`, `milestones`,
+`provider_dashboard` y `ai_quote`, más regresiones de `matching`.
+
+```bash
+# 1. Mongo arriba (docker compose -f infra/docker-compose.dev.yml up -d)
+# 2. API arriba, apuntando a una BD de pruebas y con almacenamiento local:
+cd apps/api
+MONGO_DB_NAME=xambas_test STORAGE_PROVIDER=local \
+  uv run uvicorn app.main:app --port 8000
+# 3. En otra terminal:
+cd apps/api
+uv sync            # instala el grupo dev (pytest, pillow)
+uv run pytest      # usa http://localhost:8000 por defecto
+```
+
+- La URL base se toma de `XAMBAS_API_URL` (o `REACT_APP_BACKEND_URL`), si no
+  `http://localhost:8000`.
+- Los IDs de categoría se resuelven en tiempo de ejecución contra el catálogo
+  sembrado; no hay IDs hardcodeados.
+- Las pruebas marcadas `external` llaman a Groq de verdad y se saltan salvo
+  `XAMBAS_RUN_EXTERNAL_TESTS=1` (requiere `GROQ_API_KEY`).
+- `STORAGE_PROVIDER=local` guarda los archivos subidos en `apps/api/.storage/`
+  (sin red ni credenciales de Emergent); útil para desarrollo local y CI.
+
+### Tests del frontend (`apps/client`)
+
+Vitest + Testing Library, con `jsdom`. Cubren el ruteo de pestañas, el flujo
+de registro/OTP, y cada panel (solicitudes, recurrentes, cotización IA) con
+`lib/api.js` mockeado.
+
+```bash
+yarn workspace client test        # una corrida (lo que usa el CI)
+yarn workspace client test:watch  # modo watch
+```
+
+### GitHub Actions (`.github/workflows/ci.yml`)
+
+En cada push a `main`/`develop` y en cada PR:
+
+- **backend**: levanta Mongo, arranca la API (`STORAGE_PROVIDER=local`) y corre
+  `pytest`.
+- **frontend**: `yarn install`, `yarn workspace client test` y build de las 4
+  apps (`client`, `provider`, `admin`, `web`).
 
 ## Siguientes pasos sugeridos
 

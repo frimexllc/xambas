@@ -55,7 +55,9 @@ PaymentStatus = Literal["pending", "held_in_escrow", "released", "refunded", "fa
 
 class PaymentCreateRequest(BaseModel):
     match_id: str
-    client_id: str
+    # El cliente sale del token de sesión; se conserva opcional por
+    # retrocompatibilidad y se ignora si viene en el body.
+    client_id: str | None = None
     job_amount: float
 
 

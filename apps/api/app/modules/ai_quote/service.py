@@ -9,6 +9,7 @@ from groq import AsyncGroq
 from pydantic import ValidationError
 
 from app.core.config import settings
+from app.core.images import downscale_for_vision
 from app.core.storage import object_storage
 from app.modules.ai_quote.repository import AiQuoteRepository
 from app.modules.ai_quote.schemas import (
@@ -121,8 +122,11 @@ class AiQuoteService:
                     original_filename=upload.filename,
                 )
             )
-            encoded = base64.b64encode(content).decode("utf-8")
-            data_urls.append(f"data:{upload.content_type};base64,{encoded}")
+            # El original se guarda tal cual arriba; para el modelo de visión
+            # mandamos una copia reducida (no afecta lo que ve el cliente).
+            vision_content, vision_type = downscale_for_vision(content, upload.content_type)
+            encoded = base64.b64encode(vision_content).decode("utf-8")
+            data_urls.append(f"data:{vision_type};base64,{encoded}")
 
         estimate = await self._run_vision(
             category_name=category_name,
@@ -227,19 +231,26 @@ class AiQuoteService:
             items=[self._serialize_quote(document) for document in documents],
         )
 
-    async def get_estimate(self, quote_id: str) -> QuoteResponse:
+    async def get_estimate(self, quote_id: str, acting_user_id: str | None = None) -> QuoteResponse:
         try:
             document = await self._repository.get_quote_by_id(quote_id)
         except InvalidId as exc:
             raise HTTPException(status.HTTP_400_BAD_REQUEST, "quote_id inválido") from exc
         if document is None:
             raise HTTPException(status.HTTP_404_NOT_FOUND, "cotización no encontrada")
+        if acting_user_id is not None and document.get("client_id") != acting_user_id:
+            raise HTTPException(status.HTTP_403_FORBIDDEN, "esta cotización pertenece a otro cliente")
         return QuoteResponse(module="ai_quote", quote=self._serialize_quote(document))
 
-    async def get_file(self, path: str) -> tuple[bytes, str]:
+    async def get_file(self, path: str, acting_user_id: str | None = None) -> tuple[bytes, str]:
         prefix = f"{settings.storage_app_name}/ai-quote/"
         if not path.startswith(prefix):
             raise HTTPException(status.HTTP_404_NOT_FOUND, "imagen no encontrada")
+        # Las rutas son `<app>/ai-quote/<client_id>/<archivo>`: solo el dueño la ve.
+        if acting_user_id is not None:
+            segments = path[len(prefix):].split("/", 1)
+            if not segments or segments[0] != acting_user_id:
+                raise HTTPException(status.HTTP_404_NOT_FOUND, "imagen no encontrada")
         try:
             return await asyncio.to_thread(object_storage.get_object, path)
         except Exception as exc:  # noqa: BLE001

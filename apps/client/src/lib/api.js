@@ -1,11 +1,23 @@
 const BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000/api";
 
+// Token de sesión (Bearer) para los endpoints autenticados de cliente.
+// Lo fija App.jsx al iniciar sesión y al cargar la sesión guardada.
+let authToken = null;
+
+export function setAuthToken(token) {
+  authToken = token || null;
+}
+
+function authHeaders() {
+  return authToken ? { Authorization: `Bearer ${authToken}` } : {};
+}
+
 async function request(path, options = {}) {
   let response;
   try {
     response = await fetch(`${BASE_URL}${path}`, {
-      headers: { "Content-Type": "application/json" },
       ...options,
+      headers: { "Content-Type": "application/json", ...authHeaders(), ...(options.headers || {}) },
     });
   } catch (networkError) {
     throw new Error(
@@ -34,6 +46,8 @@ export const api = {
     request("/identity/otp/request", { method: "POST", body: JSON.stringify(payload) }),
   verifyOtp: (payload) =>
     request("/identity/otp/verify", { method: "POST", body: JSON.stringify(payload) }),
+  login: (payload) =>
+    request("/identity/login", { method: "POST", body: JSON.stringify(payload) }),
 
   // matching
   listCategories: (parentId) =>
@@ -94,6 +108,7 @@ export const api = {
     try {
       response = await fetch(`${BASE_URL}/ai-quote/estimate`, {
         method: "POST",
+        headers: authHeaders(),
         body: formData,
       });
     } catch (networkError) {

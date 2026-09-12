@@ -100,6 +100,22 @@ class IdentityUserResponse(BaseModel):
     provider_profile: ProviderProfileSummary | None = None
 
 
+class LoginStartRequest(BaseModel):
+    # Teléfono (con lada) o correo con el que se registró la cuenta.
+    identifier: str = Field(min_length=5, max_length=255)
+    channel: Literal["sms"] = "sms"
+
+
+class LoginStartResponse(BaseModel):
+    module: str
+    status: str
+    user_id: str
+    challenge_id: str
+    expires_at: str
+    delivery_target: str
+    debug_code: str | None = None
+
+
 class OtpRequestPayload(BaseModel):
     user_id: str
     purpose: Literal["registration", "login"] = "registration"

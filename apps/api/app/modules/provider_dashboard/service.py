@@ -20,11 +20,15 @@ class ProviderDashboardService:
         self._recurring = RecurringRepository()
 
     async def get_dashboard(
-        self, *, provider_user_id: str, provider_profile_id: str
+        self, *, provider_user_id: str, provider_profile_id: str, acting_user_id: str | None = None
     ) -> ProviderDashboardResponse:
         profile = await self._identity.get_provider_profile_by_id(provider_profile_id)
         if profile is None:
             raise HTTPException(status.HTTP_404_NOT_FOUND, "provider_profile no encontrado")
+        if acting_user_id is not None and (
+            provider_user_id != acting_user_id or profile["user_id"] != acting_user_id
+        ):
+            raise HTTPException(status.HTTP_403_FORBIDDEN, "este panel no te pertenece")
 
         tier, commission_pct = tiers.compute_provider_tier(
             profile.get("jobs_completed", 0),
