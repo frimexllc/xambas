@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Elements, PaymentElement, useElements, useStripe } from "@stripe/react-stripe-js";
 import { api } from "../lib/api.js";
-import { getStripe } from "../lib/stripe.js";
+import { getStripe, getStripeAppearance } from "../lib/stripe.js";
 import { COUNTRY_CODE } from "../constants.js";
 import { StatusBadge } from "../components/StatusBadge.jsx";
 import { ChatPanel } from "../components/ChatPanel.jsx";
@@ -481,7 +481,7 @@ function PaymentPanel({ match, session, onClose, onError }) {
       {checkout && (
         <Elements
           stripe={getStripe(checkout.publishableKey)}
-          options={{ clientSecret: checkout.clientSecret }}
+          options={{ clientSecret: checkout.clientSecret, appearance: getStripeAppearance() }}
         >
           <CheckoutForm onPaid={handlePaid} onError={onError} />
         </Elements>

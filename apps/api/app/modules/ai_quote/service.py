@@ -9,6 +9,7 @@ from groq import AsyncGroq
 from pydantic import ValidationError
 
 from app.core.config import settings
+from app.core.images import downscale_for_vision
 from app.core.storage import object_storage
 from app.modules.ai_quote.repository import AiQuoteRepository
 from app.modules.ai_quote.schemas import (
@@ -121,8 +122,11 @@ class AiQuoteService:
                     original_filename=upload.filename,
                 )
             )
-            encoded = base64.b64encode(content).decode("utf-8")
-            data_urls.append(f"data:{upload.content_type};base64,{encoded}")
+            # El original se guarda tal cual arriba; para el modelo de visión
+            # mandamos una copia reducida (no afecta lo que ve el cliente).
+            vision_content, vision_type = downscale_for_vision(content, upload.content_type)
+            encoded = base64.b64encode(vision_content).decode("utf-8")
+            data_urls.append(f"data:{vision_type};base64,{encoded}")
 
         estimate = await self._run_vision(
             category_name=category_name,
